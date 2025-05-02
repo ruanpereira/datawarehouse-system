@@ -1,60 +1,76 @@
-import pdfplumber
-import re
-from pprint import pprint
+import pandas as pd
+import os
+from PyPDF2 import PdfReader
+# Para Excel, instale openpyxl: pip install openpyxl
+# Para PDF, instale PyPDF2: pip install pypdf
 
-def extract_pdf_data(pdf_path):
-    data = {
-        "codigo_pn": None,
-        "nome_pn": None,
-        "cnpj": None,
-        "simples_nacional": None,
-        "dados_bancarios": {},
-        "transacoes": [],
-        "totais": {}
-    }
+class FileBase():
+    SUPPORTED_EXTENSIONS = ['.csv', '.xlsx', '.xls', '.pdf']  # Extensões suportadas
+    
+    def __init__(self):
+        self.path = "data/"
+        self.file_path = None
+        self.file_type = None
+        self.push_path()
+    
+    def push_path(self):
+        for root, _, files in os.walk(self.path):
+            for file in files:
+                for ext in self.SUPPORTED_EXTENSIONS:
+                    if file.lower().endswith(ext):
+                        self.file_path = os.path.join(root, file)
+                        self.file_type = ext
+                        break  # Encerra o loop de extensões
+                if self.file_path is not None:
+                    break  # Encerra o loop de arquivos
+            if self.file_path is not None:
+                break  # Encerra o loop de diretórios
+    
+    def get_path(self):
+        return self.path
+    
+    def get_file_path(self):
+        return self.file_path
+    
+    def get_file_type(self):
+        return self.file_type
 
-    with pdfplumber.open(pdf_path) as pdf:
-        text = pdf.pages[0].extract_text()
+class DataFileManagement(FileBase):
+    def __init__(self):
+        super().__init__()
+        self.dataset = None
+        self.columns = None
+        self.create_dataset()
+        self.set_columns_to_list()
+    
+    def create_dataset(self):
+        file_path = self.get_file_path()
+        file_type = self.get_file_type()
         
-        # Extrair campos básicos
-        data["codigo_pn"] = re.search(r"REP\d+", text).group()
-        data["nome_pn"] = re.search(r"Nome do PN:\s+(.+)", text).group(1)
-        data["cnpj"] = re.search(r"CNPJ:\s+([\d./-]+)", text).group(1)
-        data["simples_nacional"] = re.search(r"SIMPLES Nacional:\s+(\w+)", text).group(1)
+        if file_type == '.csv':
+            self.dataset = pd.read_csv(file_path)
+        elif file_type in ('.xlsx', '.xls'):
+            self.dataset = pd.read_excel(file_path)
+        elif file_type == '.pdf':
+            # Extrai texto do PDF (para tabelas, considere usar tabula-py)
+            reader = PdfReader(file_path)
+            text = ""
+            for page in reader.pages:
+                text += page.extract_text()
+            self.dataset = pd.DataFrame({'Texto': [text]})
+        else:
+            raise ValueError(f"Formato de arquivo não suportado: {file_type}")
         
-        # Dados bancários corrigidos
-        banco_match = re.search(
-            r"Dados bancários:\s+(.+?)\n(.+?)\n", 
-            text, 
-            re.DOTALL
-        )
-        if banco_match:
-            banco_nome = banco_match.group(1).strip()
-            conta_info = banco_match.group(2).replace(' ', '').split('/')
-            
-            data["dados_bancarios"] = {
-                "banco": banco_nome,
-                "agencia": conta_info[0].strip(),
-                "conta": conta_info[1].strip() if len(conta_info) > 1 else None
-            }
-
-        # Extrair totais 
-        def extract_total(pattern):
-            match = re.search(pattern, text, re.DOTALL)
-            if match:
-                return float(match.group(1).replace('.', '').replace(',', '.'))
-            return 0.0
-
-        data["totais"] = {
-            "credito": extract_total(r"CRÉDITO:\s+R\$\s+([\d.,]+)"),
-            "debito": extract_total(r"DÉBITO:\s+R\$\s+([\d.,]+)"),
-            "total_bruto": extract_total(r"TOTAL BRUTO:\s+R\$\s+([\d.,]+)"),
-            "irrf": extract_total(r"IRRF:\s+R\$\s+([\d.,]+)"),
-            "total_liquido": extract_total(r"TOTAL LÍQUIDO:\s+R\$\s+([\d.,]+)")
-        }
-
-    return data
-
-# Uso
-dados = extract_pdf_data("Comissao_48181-MAC RON ALVES COELHO PIRES - 22.04.2025.pdf")
-pprint(dados)
+        self.columns = self.dataset.columns
+    
+    def create_vendas_txt(self):
+        name_file = input("Informe o nome do arquivo: ")
+        with open(f"{name_file}.txt", 'w', encoding='utf-8') as f:
+            f.write(self.dataset.to_string(index=False))
+        print(f"Arquivo {name_file}.txt criado!")
+    
+    def set_columns_to_list(self):
+        self.columns_list = list(self.columns)
+    
+    def get_columns(self):
+        return self.columns_list if self.columns_list is not None else "Use set_columns_to_list() primeiro!"
