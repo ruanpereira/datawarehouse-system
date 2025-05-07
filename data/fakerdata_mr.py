@@ -10,6 +10,7 @@ num_registros = 100
 status_cota = ['Ativa', 'Cancelada', 'Quitada', 'Em atraso']
 categorias = ['Automóvel', 'Imóvel', 'Motocicleta', 'Caminhão']
 regras = ['Normal', 'Promocional', 'Especial', 'Corretor']
+consorciado = ["coca-cola", "Intel", "Lenovo", "Positivo"]
 
 # Gerando os dados
 dados = []
@@ -30,7 +31,7 @@ for _ in range(num_registros):
         'CÓD COMISSIONADO': fake.random_number(digits=6),
         'CÓD PV': fake.random_number(digits=5),
         'CONTRATO': contrato,
-        'CONSORCIADO': fake.random_number(digits=11),
+        'CONSORCIADO': random.choice(consorciado),
         'NOME CONSORCIADO': fake.name(),
         'STATUS COTA': random.choice(status_cota),
         'PARC/LIB': parc_lib,
