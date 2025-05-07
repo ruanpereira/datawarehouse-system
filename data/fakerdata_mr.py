@@ -11,6 +11,7 @@ status_cota = ['Ativa', 'Cancelada', 'Quitada', 'Em atraso']
 categorias = ['Automóvel', 'Imóvel', 'Motocicleta', 'Caminhão']
 regras = ['Normal', 'Promocional', 'Especial', 'Corretor']
 consorciado = ["coca-cola", "Intel", "Lenovo", "Positivo"]
+vendedores = [fake.name() for _ in range(0, 5)]
 
 # Gerando os dados
 dados = []
@@ -45,7 +46,7 @@ for _ in range(num_registros):
         'CANCELAMENTO COTA R$': cancelamento,
         'BASE R$': base,
         'LÍQUIDO R$': liquido,
-        'VENDEDOR': fake.name()
+        'VENDEDOR': random.choice(vendedores)
     })
 
 df = pd.DataFrame(dados)
