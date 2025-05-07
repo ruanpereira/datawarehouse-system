@@ -26,6 +26,7 @@ for _ in range(num_registros):
     base = base_calc - estorno - cancelamento
     liquido = comissao - estorno - cancelamento
     
+    
     dados.append({
         'DATA VENDA': data_venda,
         'CÓD COMISSIONADO': fake.random_number(digits=6),

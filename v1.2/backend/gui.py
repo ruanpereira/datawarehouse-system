@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 from dataloader import DataLoader
-from filters import filter_status_atraso, filter_high_commission, filter_by_year, total_liquido_por_vendedor
+from filters import filter_status_atraso, filter_high_commission, filter_by_year, total_liquido_por_vendedor, total_liquido_por_consorcio_vendedor
 from report_generator import ReportGenerator
 import pandas as pd
 import os
@@ -47,8 +47,10 @@ class App(tk.Tk):
                                 command=lambda: self.display_df(filter_by_year(self.df, 2025), "Vendas 2025"))
         self.btn_total = ttk.Button(filters_frame, text="Total Líq. por Vendedor",
                                   command=lambda: self.display_df(total_liquido_por_vendedor(self.df), "Total Líquido"))
+        self.btn_total_consorcio = ttk.Button(filters_frame, text="Total Líq. por Consorcio e vendedor",
+                                  command=lambda: self.display_df(total_liquido_por_consorcio_vendedor(self.df), "Total Líquido"))
 
-        for idx, btn in enumerate([self.btn_atraso, self.btn_comissao, self.btn_ano, self.btn_total]):
+        for idx, btn in enumerate([self.btn_atraso, self.btn_comissao, self.btn_ano, self.btn_total, self.btn_total_consorcio]):
             btn.grid(row=idx, column=0, pady=3, sticky='ew')
             btn.grid_remove()
 
@@ -104,7 +106,7 @@ class App(tk.Tk):
                 self.file_var.set(path)
                 
                 # Mostrar botões de filtro
-                for btn in [self.btn_atraso, self.btn_comissao, self.btn_ano, self.btn_total]:
+                for btn in [self.btn_atraso, self.btn_comissao, self.btn_ano, self.btn_total, self.btn_total_consorcio]:
                     btn.grid()
                 
                 messagebox.showinfo("Sucesso", "Arquivo carregado com sucesso!")

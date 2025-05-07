@@ -15,3 +15,7 @@ def filter_by_year(df: pd.DataFrame, year: int) -> pd.DataFrame:
 def total_liquido_por_vendedor(df: pd.DataFrame) -> pd.DataFrame:
     """Agrupa vendas por vendedor somando o valor líquido."""
     return df.groupby('VENDEDOR')['LÍQUIDO R$'].sum().reset_index()
+
+def total_liquido_por_consorcio_vendedor(df: pd.DataFrame) -> pd.DataFrame:
+    """Agrupa consorcio e vendedor somando o valor liquido"""
+    return df.groupby(['CONSORCIADO', 'VENDEDOR'])['LÍQUIDO R$'].sum().reset_index()
