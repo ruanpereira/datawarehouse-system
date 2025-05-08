@@ -3,6 +3,8 @@
 *.csv
 *.docx
 *.xlsx
+*.jpeg
+*.png
 
 # uv file for dependencies
 pyproject.toml
