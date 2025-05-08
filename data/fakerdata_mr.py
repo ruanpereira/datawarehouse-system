@@ -10,7 +10,7 @@ num_registros = 100
 status_cota = ['Ativa', 'Cancelada', 'Quitada', 'Em atraso']
 categorias = ['Automóvel', 'Imóvel', 'Motocicleta', 'Caminhão']
 regras = ['Normal', 'Promocional', 'Especial', 'Corretor']
-consorciado = ["coca-cola", "Intel", "Lenovo", "Positivo"]
+consorciado = ["coca-cola", "Intel", "Lenovo", "Positivo", "Carol LTDA", "Felipe INC."]
 vendedores = [fake.name() for _ in range(0, 5)]
 
 # Gerando os dados

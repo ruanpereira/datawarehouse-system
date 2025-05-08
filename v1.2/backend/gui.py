@@ -1,8 +1,8 @@
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 from dataloader import DataLoader
-from filters import filter_status_atraso, filter_high_commission, filter_by_year, total_liquido_por_vendedor, total_liquido_por_consorcio_vendedor
-from report_generator import ReportGenerator
+from filters import filter_status_atraso, filter_high_commission, filter_by_year, total_liquido_por_vendedor, total_liquido_por_consorcio_vendedor, relatorio_por_consorciado
+from report_generator import ReportGenerator, RelatorioToDf
 import pandas as pd
 import os
 
@@ -11,6 +11,7 @@ class App(tk.Tk):
         super().__init__()
         self.title("Gerador de Relatório de Vendas")
         self.geometry("1000x700")
+        self.minsize(800, 600)
         self.style = ttk.Style(self)
         self.style.theme_use('clam')
         self.configure_style()
@@ -19,80 +20,100 @@ class App(tk.Tk):
         self.numeric_columns = []
         self.filter_buttons = []
         self._build_ui()
-
+        
     def configure_style(self):
-        self.style.configure('TButton', padding=6, font=('Arial', 10))
-        self.style.configure('TLabel', font=('Arial', 10, 'bold'))
-        self.style.configure('Header.TLabel', font=('Arial', 12, 'bold'))
-        self.style.configure('TCombobox', padding=5)
-        self.style.configure('TCheckbutton', font=('Arial', 10))
-        self.style.configure('TEntry', padding=5)
+        self.style.configure('.', background='#f0f2f5', font=('Segoe UI', 10))
+        self.style.configure('TButton', padding=8, relief='flat', background='#007bff', foreground='white')
         self.style.map('TButton',
-                      foreground=[('active', '!disabled', 'black')],
-                      background=[('active', '#0052cc'), ('!active', '#007bff')])
+                      foreground=[('active', 'white'), ('disabled', 'gray')],
+                      background=[('active', '#0056b3'), ('!disabled', '#007bff')])
+        self.style.configure('TLabel', background='#f0f2f5', foreground='#333333')
+        self.style.configure('Header.TLabel', font=('Segoe UI', 12, 'bold'), foreground='#2c3e50')
+        self.style.configure('TCombobox', padding=5)
+        self.style.configure('TCheckbutton', background='#f0f2f5')
+        self.style.configure('TEntry', padding=5, relief='flat')
+        self.style.configure('TFrame', background='#f0f2f5')
+        self.style.configure('TLabelframe', background='#f0f2f5', relief='groove', borderwidth=2)
+        self.style.configure('TLabelframe.Label', background='#f0f2f5', foreground='#2c3e50')
 
     def _build_ui(self):
-        main_frame = ttk.Frame(self, padding=15)
+        main_frame = ttk.Frame(self, padding=20)
         main_frame.pack(expand=True, fill='both')
 
+        # Configurar grid principal
+        main_frame.columnconfigure(0, weight=1)
+        main_frame.rowconfigure(4, weight=1)
+
+        # Frame de Seleção de Arquivo
+        file_frame = ttk.LabelFrame(main_frame, text=" Seleção de Arquivo ", padding=15)
+        file_frame.grid(row=0, column=0, padx=5, pady=5, sticky='ew')
+        file_frame.columnconfigure(0, weight=1)
+
+        self.file_var = tk.StringVar(value="Nenhum arquivo selecionado")
+        self.entry_file = ttk.Entry(file_frame, textvariable=self.file_var, state='readonly')
+        self.entry_file.grid(row=0, column=0, padx=(0, 10), sticky='ew')
+        ttk.Button(file_frame, text="Procurar", style='TButton', command=self.load_file)\
+            .grid(row=0, column=1, sticky='ew')
+
         # Frame de Filtros Rápidos
-        filters_frame = ttk.LabelFrame(main_frame, text=" Filtros Rápidos ", padding=10)
-        filters_frame.grid(row=0, column=0, padx=5, pady=5, sticky='nsew')
+        filters_frame = ttk.LabelFrame(main_frame, text=" Filtros Rápidos ", padding=15)
+        filters_frame.grid(row=1, column=0, padx=5, pady=5, sticky='nsew')
+        filters_frame.columnconfigure(0, weight=1)
 
         self.btn_atraso = ttk.Button(filters_frame, text="Em Atraso",
                                    command=lambda: self.display_df(filter_status_atraso(self.df), "Vendas em Atraso"))
-        self.btn_comissao = ttk.Button(filters_frame, text="> Comissão 8%",
+        self.btn_comissao = ttk.Button(filters_frame, text="Comissão >8%",
                                      command=lambda: self.display_df(filter_high_commission(self.df), "Comissão >8%"))
         self.btn_ano = ttk.Button(filters_frame, text="Ano 2025",
                                 command=lambda: self.display_df(filter_by_year(self.df, 2025), "Vendas 2025"))
         self.btn_total = ttk.Button(filters_frame, text="Total Líq. por Vendedor",
                                   command=lambda: self.display_df(total_liquido_por_vendedor(self.df), "Total Líquido"))
-        self.btn_total_consorcio = ttk.Button(filters_frame, text="Total Líq. por Consorcio e vendedor",
+        self.btn_total_consorcio = ttk.Button(filters_frame, text="Total Líq. por Consorcio e Vendedor",
                                   command=lambda: self.display_df(total_liquido_por_consorcio_vendedor(self.df), "Total Líquido"))
+        self.btn_total_consorcio_relatorio = ttk.Button(filters_frame, text="Relatório Consorciados",
+                                  command=lambda: self.display_df(RelatorioToDf.generate(relatorio_por_consorciado(self.df)), "Total Líquido - Relatório"))
 
-        for idx, btn in enumerate([self.btn_atraso, self.btn_comissao, self.btn_ano, self.btn_total, self.btn_total_consorcio]):
-            btn.grid(row=idx, column=0, pady=3, sticky='ew')
+        buttons = [self.btn_atraso, self.btn_comissao, self.btn_ano, 
+                  self.btn_total, self.btn_total_consorcio, self.btn_total_consorcio_relatorio]
+        
+        for idx, btn in enumerate(buttons):
+            btn.grid(row=idx, column=0, pady=4, sticky='ew')
             btn.grid_remove()
 
-        # Frame de Seleção de Arquivo
-        file_frame = ttk.LabelFrame(main_frame, text=" Seleção de Arquivo ", padding=10)
-        file_frame.grid(row=1, column=0, padx=5, pady=5, sticky='ew')
-
-        self.file_var = tk.StringVar(value="Nenhum arquivo selecionado")
-        self.entry_file = ttk.Entry(file_frame, textvariable=self.file_var, state='readonly')
-        self.entry_file.grid(row=0, column=0, padx=(0, 5), sticky='ew')
-        ttk.Button(file_frame, text="Procurar", command=self.load_file).grid(row=0, column=1, sticky='ew')
-
         # Frame de Filtros Personalizados
-        custom_filter_frame = ttk.LabelFrame(main_frame, text=" Filtros Personalizados ", padding=10)
+        custom_filter_frame = ttk.LabelFrame(main_frame, text=" Filtros Personalizados ", padding=15)
         custom_filter_frame.grid(row=2, column=0, padx=5, pady=5, sticky='ew')
+        custom_filter_frame.columnconfigure(0, weight=1)
 
         ttk.Label(custom_filter_frame, text="Coluna para filtrar:").grid(row=0, column=0, sticky='w')
         self.combo_columns = ttk.Combobox(custom_filter_frame, state='readonly')
-        self.combo_columns.grid(row=1, column=0, pady=3, sticky='ew')
+        self.combo_columns.grid(row=1, column=0, pady=5, sticky='ew')
         self.combo_columns.bind("<<ComboboxSelected>>", self.load_values)
 
         ttk.Label(custom_filter_frame, text="Valor para filtrar:").grid(row=2, column=0, sticky='w')
         self.combo_values = ttk.Combobox(custom_filter_frame, state='readonly')
-        self.combo_values.grid(row=3, column=0, pady=3, sticky='ew')
+        self.combo_values.grid(row=3, column=0, pady=5, sticky='ew')
 
         # Frame de Opções
-        options_frame = ttk.LabelFrame(main_frame, text=" Opções de Relatório ", padding=10)
+        options_frame = ttk.LabelFrame(main_frame, text=" Opções de Relatório ", padding=15)
         options_frame.grid(row=3, column=0, padx=5, pady=5, sticky='ew')
+        options_frame.columnconfigure(0, weight=1)
 
         self.var_media_date = tk.BooleanVar()
         self.var_media_all = tk.BooleanVar()
-        ttk.Checkbutton(options_frame, text="Incluir média por data", variable=self.var_media_date).grid(row=0, column=0, sticky='w')
-        ttk.Checkbutton(options_frame, text="Incluir média geral", variable=self.var_media_all).grid(row=1, column=0, sticky='w')
+        ttk.Checkbutton(options_frame, text="Incluir média por data", variable=self.var_media_date)\
+            .grid(row=0, column=0, sticky='w', pady=2)
+        ttk.Checkbutton(options_frame, text="Incluir média geral", variable=self.var_media_all)\
+            .grid(row=1, column=0, sticky='w', pady=2)
 
         # Botão Gerar Relatório
-        ttk.Button(main_frame, text="Gerar Relatório", style='TButton', command=self.generate)\
+        ttk.Button(main_frame, text="Gerar Relatório", style='Accent.TButton', command=self.generate)\
             .grid(row=4, column=0, pady=15, sticky='ew')
 
-        # Configurar pesos das linhas/colunas
-        main_frame.columnconfigure(0, weight=1)
-        filters_frame.columnconfigure(0, weight=1)
-        file_frame.columnconfigure(0, weight=1)
+        # Criar estilo adicional para botão principal
+        self.style.configure('Accent.TButton', background='#28a745', foreground='white')
+        self.style.map('Accent.TButton',
+                      background=[('active', '#218838'), ('!disabled', '#28a745')])
 
     def load_file(self):
         path = filedialog.askopenfilename(
@@ -106,7 +127,7 @@ class App(tk.Tk):
                 self.file_var.set(path)
                 
                 # Mostrar botões de filtro
-                for btn in [self.btn_atraso, self.btn_comissao, self.btn_ano, self.btn_total, self.btn_total_consorcio]:
+                for btn in [self.btn_atraso, self.btn_comissao, self.btn_ano, self.btn_total, self.btn_total_consorcio,self.btn_total_consorcio_relatorio ]:
                     btn.grid()
                 
                 messagebox.showinfo("Sucesso", "Arquivo carregado com sucesso!")
@@ -122,19 +143,39 @@ class App(tk.Tk):
     def display_df(self, df: pd.DataFrame, title: str):
         win = tk.Toplevel(self)
         win.title(title)
-        win.geometry("800x500")
+        win.geometry("900x600")
+        win.minsize(600, 400)
 
         container = ttk.Frame(win)
-        container.pack(fill='both', expand=True)
+        container.pack(fill='both', expand=True, padx=10, pady=10)
+        container.columnconfigure(0, weight=1)
+        container.rowconfigure(1, weight=1)
 
-        tv = ttk.Treeview(container, columns=list(df.columns), show='headings')
-        vsb = ttk.Scrollbar(container, orient="vertical", command=tv.yview)
-        hsb = ttk.Scrollbar(container, orient="horizontal", command=tv.xview)
+        # Frame de controles
+        control_frame = ttk.Frame(container)
+        control_frame.grid(row=0, column=0, sticky='ew', pady=(0, 10))
+
+        ttk.Button(
+            control_frame,
+            text="Exportar para Excel",
+            style='TButton',
+            command=lambda: self.export_to_excel(df, title)
+        ).pack(side='right')
+
+        # Treeview
+        tv_frame = ttk.Frame(container)
+        tv_frame.grid(row=1, column=0, sticky='nsew')
+        tv_frame.columnconfigure(0, weight=1)
+        tv_frame.rowconfigure(0, weight=1)
+
+        tv = ttk.Treeview(tv_frame, columns=list(df.columns), show='headings')
+        vsb = ttk.Scrollbar(tv_frame, orient="vertical", command=tv.yview)
+        hsb = ttk.Scrollbar(tv_frame, orient="horizontal", command=tv.xview)
         tv.configure(yscrollcommand=vsb.set, xscrollcommand=hsb.set)
 
         for col in df.columns:
             tv.heading(col, text=col)
-            tv.column(col, width=100, anchor='center')
+            tv.column(col, width=100, anchor='center', minwidth=50)
 
         for _, row in df.iterrows():
             tv.insert('', 'end', values=list(row))
@@ -142,9 +183,23 @@ class App(tk.Tk):
         tv.grid(row=0, column=0, sticky='nsew')
         vsb.grid(row=0, column=1, sticky='ns')
         hsb.grid(row=1, column=0, sticky='ew')
-
-        container.grid_rowconfigure(0, weight=1)
-        container.grid_columnconfigure(0, weight=1)
+    def export_to_excel(self, df: pd.DataFrame, title: str):
+        try:
+            default_name = f"{title.replace(' ', '_')}.xlsx"
+            filepath = filedialog.asksaveasfilename(
+                defaultextension=".xlsx",
+                filetypes=[("Excel files", "*.xlsx"), ("All files", "*.*")],
+                initialfile=default_name,
+                title="Salvar arquivo Excel"
+            )
+            
+            if not filepath:  # Usuário cancelou
+                return
+                
+            df.to_excel(filepath, index=False)
+            messagebox.showinfo("Sucesso", f"Dados exportados com sucesso!\nLocal: {filepath}")
+        except Exception as e:
+            messagebox.showerror("Erro", f"Falha na exportação:\n{str(e)}")
 
     def generate(self):
         col = self.combo_columns.get()

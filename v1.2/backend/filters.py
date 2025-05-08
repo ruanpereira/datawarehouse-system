@@ -19,3 +19,24 @@ def total_liquido_por_vendedor(df: pd.DataFrame) -> pd.DataFrame:
 def total_liquido_por_consorcio_vendedor(df: pd.DataFrame) -> pd.DataFrame:
     """Agrupa consorcio e vendedor somando o valor liquido"""
     return df.groupby(['CONSORCIADO', 'VENDEDOR'])['LÍQUIDO R$'].sum().reset_index()
+
+def relatorio_por_consorciado(df: pd.DataFrame) -> dict:
+    """
+    Gera um dicionário com os dados agrupados por consorciado, incluindo a data de venda.
+    Retorna: {consorciado: {'data_venda': data, 'vendedores': DataFrame, 'total': float}}
+    """
+    grouped = df.groupby('CONSORCIADO')
+    result = {}
+    for consorciado, group in grouped:
+        # Assume que todas as vendas do consorciado têm a mesma data de venda
+        data_venda = group['DATA VENDA'].iloc[0]
+        # Agrupa por vendedor e calcula o total líquido + 20%
+        vendedores = group.groupby('VENDEDOR')['LÍQUIDO R$'].sum().reset_index()
+        vendedores['Total'] = vendedores['LÍQUIDO R$'] * 1.2  # Adiciona 20%
+        total_consorciado = vendedores['Total'].sum()
+        result[consorciado] = {
+            'data_venda': data_venda,
+            'vendedores': vendedores,
+            'total': total_consorciado
+        }
+    return result
