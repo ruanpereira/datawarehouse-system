@@ -183,23 +183,85 @@ class App(tk.Tk):
         tv.grid(row=0, column=0, sticky='nsew')
         vsb.grid(row=0, column=1, sticky='ns')
         hsb.grid(row=1, column=0, sticky='ew')
+    
     def export_to_excel(self, df: pd.DataFrame, title: str):
-        try:
-            default_name = f"{title.replace(' ', '_')}.xlsx"
-            filepath = filedialog.asksaveasfilename(
-                defaultextension=".xlsx",
-                filetypes=[("Excel files", "*.xlsx"), ("All files", "*.*")],
-                initialfile=default_name,
-                title="Salvar arquivo Excel"
-            )
-            
-            if not filepath:  # Usuário cancelou
-                return
-                
-            df.to_excel(filepath, index=False)
-            messagebox.showinfo("Sucesso", f"Dados exportados com sucesso!\nLocal: {filepath}")
-        except Exception as e:
-            messagebox.showerror("Erro", f"Falha na exportação:\n{str(e)}")
+        # Pergunta onde salvar
+        filepath = filedialog.asksaveasfilename(
+            defaultextension=".xlsx",
+            filetypes=[("Arquivos Excel", "*.xlsx")]
+        )
+        if not filepath:
+            return
+
+        # Verifica se 'CONSORCIADO' existe
+        if 'CONSORCIADO' not in df.columns:
+            messagebox.showerror("Erro", "A coluna 'CONSORCIADO' não está presente no DataFrame.")
+            return
+
+        # Cria o writer usando xlsxwriter
+        with pd.ExcelWriter(filepath, engine='xlsxwriter') as writer:
+            workbook  = writer.book
+            sheet_name = title[:31]  # máximo 31 chars
+            worksheet = workbook.add_worksheet(sheet_name)
+            writer.sheets[sheet_name] = worksheet
+
+            # Formatos
+            header_fmt = workbook.add_format({
+                'bold': True,
+                'align': 'center',
+                'bg_color': '#D7E4BC',
+                'border': 1
+            })
+            group_fmt = workbook.add_format({
+                'bold': True,
+                'font_size': 12,
+                'bg_color': '#F7F7F7'
+            })
+
+            row = 0
+            # Itera por cada grupo de consorciado
+            for consorciado, group in df.groupby('CONSORCIADO'):
+                # Extrai faixa de datas (caso haja)
+                data_info = ""
+                if 'DATA VENDA' in group.columns:
+                    datas = pd.to_datetime(group['DATA VENDA'].dropna(), errors='coerce')
+                    if not datas.empty:
+                        data_min = datas.min().strftime('%d/%m/%Y')
+                        data_info = f" - {data_min}"
+
+                # Remove as colunas 'CONSORCIADO' e 'DATA VENDA' se existirem
+                cols_to_drop = [col for col in ['CONSORCIADO', 'DATA VENDA'] if col in group.columns]
+                group = group.drop(columns=cols_to_drop)
+
+                # Título do grupo
+                titulo_grupo = f"{consorciado}{data_info}"
+                worksheet.merge_range(row, 0, row, len(group.columns)-1, titulo_grupo, group_fmt)
+                row += 1
+
+                # Cabeçalhos
+                for col_num, col_name in enumerate(group.columns):
+                    worksheet.write(row, col_num, col_name, header_fmt)
+                row += 1
+
+                # Dados
+                for record in group.itertuples(index=False):
+                    for col_num, value in enumerate(record):
+                        worksheet.write(row, col_num, value)
+                    row += 1
+
+                # Linha em branco
+                row += 1
+
+            # Ajusta largura das colunas (sem CONSORCIADO/DATA VENDA)
+            cols_to_measure = [col for col in df.columns if col not in ['CONSORCIADO', 'DATA VENDA']]
+            for i, col in enumerate(cols_to_measure):
+                max_len = max(
+                    df[col].astype(str).map(len).max(),
+                    len(col)
+                )
+                worksheet.set_column(i, i, max_len + 2)
+
+        messagebox.showinfo("Sucesso", f"Dados exportados!\n{filepath}")
 
     def generate(self):
         col = self.combo_columns.get()

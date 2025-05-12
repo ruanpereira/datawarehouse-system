@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 
 fake = Faker('pt_BR')
 
-num_registros = 100
+num_registros = 10000
 
 status_cota = ['Ativa', 'Cancelada', 'Quitada', 'Em atraso']
 categorias = ['Automóvel', 'Imóvel', 'Motocicleta', 'Caminhão']
