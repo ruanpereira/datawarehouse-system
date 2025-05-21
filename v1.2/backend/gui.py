@@ -3,6 +3,7 @@ from tkinter import ttk, filedialog, messagebox
 from dataloader import DataLoader
 from filters import filter_status_atraso, filter_by_year, count_inadimplentes, total_liquido_por_vendedor, total_liquido_por_consorcio_vendedor, relatorio_por_consorciado, clientes_inadimplentes, total_credito_em_atraso
 from report_generator import ReportGenerator, RelatorioToDf
+from data.db import insert_upload_and_vendas
 import pandas as pd
 import os
 
@@ -130,6 +131,11 @@ class App(tk.Tk):
         if path:
             try:
                 self.df = DataLoader.load(path)
+                df = DataLoader.load(path)
+               # Insere no Supabase e recebe o batch_id
+                self.current_batch_id = insert_upload_and_vendas(df, path)
+                # Guarda df somente para filtros rápidos (opcional)
+                self.df = df
                 self.numeric_columns = self.df.select_dtypes(include=['number']).columns.tolist()
                 self.combo_columns['values'] = self.df.columns.tolist()
                 self.file_var.set(path)
