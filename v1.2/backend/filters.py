@@ -1,12 +1,10 @@
 import pandas as pd
+from datetime import datetime
+from typing import Union
 
 def filter_status_atraso(df: pd.DataFrame) -> pd.DataFrame:
     """Retorna apenas vendas com status 'Em atraso'."""
-    return df[df['STATUS COTA'] == 'Em atraso']
-
-def filter_high_commission(df: pd.DataFrame, threshold: float = 8.0) -> pd.DataFrame:
-    """Retorna vendas com comissão acima de threshold."""
-    return df[df['COMISSAO %'] > threshold]
+    return df[df['STATUS COTA'] != 'A']
 
 def filter_by_year(df: pd.DataFrame, year: int) -> pd.DataFrame:
     """Retorna vendas ocorridas no ano especificado."""
@@ -17,22 +15,20 @@ def total_liquido_por_vendedor(df: pd.DataFrame) -> pd.DataFrame:
     return df.groupby('VENDEDOR')['LÍQUIDO R$'].sum().reset_index()
 
 def total_liquido_por_consorcio_vendedor(df: pd.DataFrame) -> pd.DataFrame:
-    """Agrupa consorcio e vendedor somando o valor liquido"""
-    return df.groupby(['CONSORCIADO', 'VENDEDOR'])['LÍQUIDO R$'].sum().reset_index()
+    """Agrupa consorciado e vendedor somando o valor líquido."""
+    return df.groupby(['NOME CONSORCIADO', 'VENDEDOR'])['LÍQUIDO R$'].sum().reset_index()
 
 def relatorio_por_consorciado(df: pd.DataFrame) -> dict:
     """
     Gera um dicionário com os dados agrupados por consorciado, incluindo a data de venda.
     Retorna: {consorciado: {'data_venda': data, 'vendedores': DataFrame, 'total': float}}
     """
-    grouped = df.groupby('CONSORCIADO')
+    grouped = df.groupby('NOME CONSORCIADO')
     result = {}
     for consorciado, group in grouped:
-        # Assume que todas as vendas do consorciado têm a mesma data de venda
         data_venda = group['DATA VENDA'].iloc[0]
-        # Agrupa por vendedor e calcula o total líquido + 20%
         vendedores = group.groupby('VENDEDOR')['LÍQUIDO R$'].sum().reset_index()
-        vendedores['Total'] = vendedores['LÍQUIDO R$'] * 1.2  # Adiciona 20%
+        vendedores['Total'] = vendedores['LÍQUIDO R$'] * 1.2  # adiciona 20%
         total_consorciado = vendedores['Total'].sum()
         result[consorciado] = {
             'data_venda': data_venda,
@@ -40,3 +36,55 @@ def relatorio_por_consorciado(df: pd.DataFrame) -> dict:
             'total': total_consorciado
         }
     return result
+
+# ————— Novas funções para cálculo de inadimplentes —————
+
+def filter_em_atraso(
+    df: pd.DataFrame,
+    data_ref: Union[str, datetime] = "2025-03-17"
+) -> pd.DataFrame:
+    """
+    Retorna apenas as parcelas que estão em atraso.
+    Considera atraso toda parcela cujo 'DATA VENCIMENTO' <= data_ref
+    e sem 'DATA PAGAMENTO'.
+    """
+    # converte colunas de data, se ainda não forem datetime
+    df = df.copy()
+    df['DATA VENCIMENTO'] = pd.to_datetime(df['DATA VENCIMENTO'], dayfirst=True)
+    if 'DATA PAGAMENTO' in df.columns:
+        df['DATA PAGAMENTO'] = pd.to_datetime(df['DATA PAGAMENTO'], dayfirst=True)
+    data_ref = pd.to_datetime(data_ref, dayfirst=True)
+    mask = (df['DATA VENCIMENTO'] <= data_ref) & df.get('DATA PAGAMENTO', pd.Series()).isna()
+    return df[mask]
+
+def clientes_inadimplentes(
+    df: pd.DataFrame,
+    data_ref: Union[str, datetime] = "2025-03-17"
+) -> pd.DataFrame:
+    """
+    Retorna um DataFrame com os clientes (contrato + nome) que têm
+    ao menos uma parcela em atraso, incluindo o valor de crédito/base.
+    """
+    atrasos = filter_em_atraso(df, data_ref)
+    cols = ['CONTRATO', 'NOME CONSORCIADO', 'BASE R$']
+    return atrasos.drop_duplicates(subset=['CONTRATO', 'NOME CONSORCIADO'])[cols]
+
+def total_credito_em_atraso(
+    df: pd.DataFrame,
+    data_ref: Union[str, datetime] = "2025-03-17"
+) -> float:
+    """
+    Calcula o somatório de crédito (BASE R$) dos clientes inadimplentes.
+    """
+    inadimplentes = clientes_inadimplentes(df, data_ref)
+    return inadimplentes['BASE R$'].sum()
+
+def count_inadimplentes(
+    df: pd.DataFrame,
+    data_ref: Union[str, datetime] = "2025-03-17"
+) -> int:
+    """
+    Retorna o número de clientes que estão com parcela(s) em atraso.
+    """
+    inadimplentes = clientes_inadimplentes(df, data_ref)
+    return len(inadimplentes)

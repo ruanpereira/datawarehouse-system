@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 from dataloader import DataLoader
-from filters import filter_status_atraso, filter_high_commission, filter_by_year, total_liquido_por_vendedor, total_liquido_por_consorcio_vendedor, relatorio_por_consorciado
+from filters import filter_status_atraso, filter_by_year, count_inadimplentes, total_liquido_por_vendedor, total_liquido_por_consorcio_vendedor, relatorio_por_consorciado, clientes_inadimplentes, total_credito_em_atraso
 from report_generator import ReportGenerator, RelatorioToDf
 import pandas as pd
 import os
@@ -62,8 +62,6 @@ class App(tk.Tk):
 
         self.btn_atraso = ttk.Button(filters_frame, text="Em Atraso",
                                    command=lambda: self.display_df(filter_status_atraso(self.df), "Vendas em Atraso"))
-        self.btn_comissao = ttk.Button(filters_frame, text="Comissão >8%",
-                                     command=lambda: self.display_df(filter_high_commission(self.df), "Comissão >8%"))
         self.btn_ano = ttk.Button(filters_frame, text="Ano 2025",
                                 command=lambda: self.display_df(filter_by_year(self.df, 2025), "Vendas 2025"))
         self.btn_total = ttk.Button(filters_frame, text="Total Líq. por Vendedor",
@@ -72,13 +70,17 @@ class App(tk.Tk):
                                   command=lambda: self.display_df(total_liquido_por_consorcio_vendedor(self.df), "Total Líquido"))
         self.btn_total_consorcio_relatorio = ttk.Button(filters_frame, text="Relatório Consorciados",
                                   command=lambda: self.display_df(RelatorioToDf.generate(relatorio_por_consorciado(self.df)), "Total Líquido - Relatório"))
+        self.btn_clientes_inadimplentes = ttk.Button(filters_frame, text="Clientes inadimplantes", 
+                                    command= lambda: self.display_df(clientes_inadimplentes(self.df), "Inadimplentes"))
 
-        buttons = [self.btn_atraso, self.btn_comissao, self.btn_ano, 
-                  self.btn_total, self.btn_total_consorcio, self.btn_total_consorcio_relatorio]
+        buttons = [self.btn_atraso, self.btn_ano, 
+                  self.btn_total, self.btn_total_consorcio, self.btn_total_consorcio_relatorio, self.btn_clientes_inadimplentes]
         
         for idx, btn in enumerate(buttons):
-            btn.grid(row=idx, column=0, pady=4, sticky='ew')
-            btn.grid_remove()
+            if idx%2==0:
+                btn.grid(row=idx, column=0, pady=4, sticky='w')
+            else:
+                btn.grid(row=idx-1, column=1, pady=4, sticky='w') 
 
         # Frame de Filtros Personalizados
         custom_filter_frame = ttk.LabelFrame(main_frame, text=" Filtros Personalizados ", padding=15)
@@ -101,10 +103,16 @@ class App(tk.Tk):
 
         self.var_media_date = tk.BooleanVar()
         self.var_media_all = tk.BooleanVar()
+        self.var_total_credito_atraso = tk.BooleanVar()
+        self.var_numero_inadimplentes = tk.BooleanVar()
         ttk.Checkbutton(options_frame, text="Incluir média por data", variable=self.var_media_date)\
             .grid(row=0, column=0, sticky='w', pady=2)
         ttk.Checkbutton(options_frame, text="Incluir média geral", variable=self.var_media_all)\
             .grid(row=1, column=0, sticky='w', pady=2)
+        ttk.Checkbutton(options_frame, text='Incluir total de credito em atraso', variable=self.var_total_credito_atraso)\
+            .grid(row=0, column=1, sticky='w', pady=2)
+        ttk.Checkbutton(options_frame, text='Incluir número de inadimplentes', variable=self.var_numero_inadimplentes)\
+            .grid(row=1, column=1, sticky='w', pady=2)
 
         # Botão Gerar Relatório
         ttk.Button(main_frame, text="Gerar Relatório", style='Accent.TButton', command=self.generate)\
@@ -127,7 +135,7 @@ class App(tk.Tk):
                 self.file_var.set(path)
                 
                 # Mostrar botões de filtro
-                for btn in [self.btn_atraso, self.btn_comissao, self.btn_ano, self.btn_total, self.btn_total_consorcio,self.btn_total_consorcio_relatorio ]:
+                for btn in [self.btn_atraso, self.btn_ano, self.btn_total, self.btn_total_consorcio,self.btn_total_consorcio_relatorio, self.btn_clientes_inadimplentes ]:
                     btn.grid()
                 
                 messagebox.showinfo("Sucesso", "Arquivo carregado com sucesso!")
@@ -194,8 +202,8 @@ class App(tk.Tk):
             return
 
         # Verifica se 'CONSORCIADO' existe
-        if 'CONSORCIADO' not in df.columns:
-            messagebox.showerror("Erro", "A coluna 'CONSORCIADO' não está presente no DataFrame.")
+        if 'NOME CONSORCIADO' not in df.columns:
+            messagebox.showerror("Erro", "A coluna 'NOME CONSORCIADO' não está presente no DataFrame.")
             return
 
         # Cria o writer usando xlsxwriter
@@ -220,7 +228,7 @@ class App(tk.Tk):
 
             row = 0
             # Itera por cada grupo de consorciado
-            for consorciado, group in df.groupby('CONSORCIADO'):
+            for consorciado, group in df.groupby('NOME CONSORCIADO'):
                 # Extrai faixa de datas (caso haja)
                 data_info = ""
                 if 'DATA VENDA' in group.columns:
@@ -229,8 +237,8 @@ class App(tk.Tk):
                         data_min = datas.min().strftime('%d/%m/%Y')
                         data_info = f" - {data_min}"
 
-                # Remove as colunas 'CONSORCIADO' e 'DATA VENDA' se existirem
-                cols_to_drop = [col for col in ['CONSORCIADO', 'DATA VENDA'] if col in group.columns]
+                # Remove as colunas 'NOME CONSORCIADO' e 'DATA VENDA' se existirem
+                cols_to_drop = [col for col in ['NOME CONSORCIADO', 'DATA VENDA'] if col in group.columns]
                 group = group.drop(columns=cols_to_drop)
 
                 # Título do grupo
@@ -253,7 +261,7 @@ class App(tk.Tk):
                 row += 1
 
             # Ajusta largura das colunas (sem CONSORCIADO/DATA VENDA)
-            cols_to_measure = [col for col in df.columns if col not in ['CONSORCIADO', 'DATA VENDA']]
+            cols_to_measure = [col for col in df.columns if col not in ['NOME CONSORCIADO', 'DATA VENDA']]
             for i, col in enumerate(cols_to_measure):
                 max_len = max(
                     df[col].astype(str).map(len).max(),
@@ -283,6 +291,8 @@ class App(tk.Tk):
                 'filtro': f"{col}: {val}",
                 'media_total': f"R$ {df_filtered[media_col].mean():.2f}",
                 'media_geral': f"R$ {self.df[media_col].mean():.2f}" if self.var_media_all.get() else None,
+                'Total de credito em atraso': f"{total_credito_em_atraso(self.df)} "  if self.var_total_credito_atraso.get() else None,
+                'Numero de inadimplentes no relatorio': f"{count_inadimplentes(self.df)} "  if self.var_numero_inadimplentes.get() else None,
                 'observacoes': ''
             }
 
