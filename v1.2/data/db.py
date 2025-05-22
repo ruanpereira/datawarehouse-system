@@ -2,6 +2,8 @@
 import os
 import uuid
 from datetime import datetime
+import pandas as pd
+import numpy as np
 from sqlalchemy import (create_engine, Column, Integer, String, DateTime,
                         Numeric, MetaData, Table)
 from sqlalchemy.orm import sessionmaker
@@ -22,9 +24,8 @@ vendas = Table(
     Column('origem_arquivo', String),
     Column('data_venda', DateTime),
     Column('data_alocacao', DateTime),
-    Column('cod_comissionado_1', String),
+    Column('cod_comissionado', String),
     Column('bem', String),
-    Column('cod_comissionado_2', String),
     Column('cod_pv', String),
     Column('cod_equipe', String),
     Column('contrato', String),
@@ -59,18 +60,32 @@ def insert_upload_and_vendas(df, origem_arquivo):
     """Insere um lote (upload) + linhas de vendas."""
     batch_id = str(uuid.uuid4())
     sess = Session()
-    # 1) insere metadados
+    
+    # Garantir conversão final para tipos nativos
+    records = df.replace({pd.NaT: None})
+    records = records.where(pd.notnull(records), None)
+    
+    # 1) Insere metadados
     sess.execute(uploads.insert().values(
         id=batch_id,
         origem_arquivo=os.path.basename(origem_arquivo),
         num_registros=len(df)
     ))
-    # 2) insere linhas
-    records = df.copy()
+    
+    # 2) Insere linhas
     records['batch_id'] = batch_id
     records['origem_arquivo'] = os.path.basename(origem_arquivo)
-    # renomeie colunas do df para combinação exata com vendas.columns se necessário
-    sess.execute(vendas.insert(), records.to_dict(orient='records'))
+    
+    # Converter para lista de dicionários
+    data_to_insert = records.to_dict(orient='records')
+    
+    # Substituir valores numpy por nativos
+    for item in data_to_insert:
+        for key, value in item.items():
+            if isinstance(value, (np.generic)):
+                item[key] = value.item()
+    
+    sess.execute(vendas.insert(), data_to_insert)
     sess.commit()
     sess.close()
     return batch_id
