@@ -200,76 +200,99 @@ class App(tk.Tk):
         )
         if not filepath:
             return
-
-        # Verifica se 'CONSORCIADO' existe
-        if 'NOME CONSORCIADO' not in df.columns:
-            messagebox.showerror("Erro", "A coluna 'NOME CONSORCIADO' não está presente no DataFrame.")
-            return
-
+    
+        # Prepara DataFrame para exportação
+        df_export = df.copy()
+        
+        # Normaliza nome de coluna de consorciado
+        if 'NOME CONSORCIADO' in df_export.columns and 'CONSORCIADO' not in df_export.columns:
+            df_export = df_export.rename(columns={'NOME CONSORCIADO': 'CONSORCIADO'})
+    
+        # Converte colunas de data para datetime
+        date_columns = ['DATA VENDA', 'DATA ALOCAÇÃO']
+        for col in date_columns:
+            if col in df_export.columns:
+                df_export[col] = pd.to_datetime(df_export[col], errors='coerce')
+    
         # Cria o writer usando xlsxwriter
         with pd.ExcelWriter(filepath, engine='xlsxwriter') as writer:
-            workbook  = writer.book
-            sheet_name = title[:31]  # máximo 31 chars
-            worksheet = workbook.add_worksheet(sheet_name)
-            writer.sheets[sheet_name] = worksheet
-
-            # Formatos
-            header_fmt = workbook.add_format({
-                'bold': True,
-                'align': 'center',
-                'bg_color': '#D7E4BC',
-                'border': 1
-            })
-            group_fmt = workbook.add_format({
-                'bold': True,
-                'font_size': 12,
-                'bg_color': '#F7F7F7'
-            })
-
-            row = 0
-            # Itera por cada grupo de consorciado
-            for consorciado, group in df.groupby('NOME CONSORCIADO'):
-                # Extrai faixa de datas (caso haja)
-                data_info = ""
-                if 'DATA VENDA' in group.columns:
-                    datas = pd.to_datetime(group['DATA VENDA'].dropna(), errors='coerce')
-                    if not datas.empty:
-                        data_min = datas.min().strftime('%d/%m/%Y')
-                        data_info = f" - {data_min}"
-
-                # Remove as colunas 'NOME CONSORCIADO' e 'DATA VENDA' se existirem
-                cols_to_drop = [col for col in ['NOME CONSORCIADO', 'DATA VENDA'] if col in group.columns]
-                group = group.drop(columns=cols_to_drop)
-
-                # Título do grupo
-                titulo_grupo = f"{consorciado}{data_info}"
-                worksheet.merge_range(row, 0, row, len(group.columns)-1, titulo_grupo, group_fmt)
-                row += 1
-
-                # Cabeçalhos
-                for col_num, col_name in enumerate(group.columns):
-                    worksheet.write(row, col_num, col_name, header_fmt)
-                row += 1
-
-                # Dados
-                for record in group.itertuples(index=False):
-                    for col_num, value in enumerate(record):
-                        worksheet.write(row, col_num, value)
+            workbook = writer.book
+            sheet_name = title[:31]  # máximo 31 caracteres
+    
+            # Se não houver coluna CONSORCIADO, faz exportação simples
+            if 'CONSORCIADO' not in df_export.columns:
+                df_export.to_excel(writer, sheet_name=sheet_name, index=False)
+            else:
+                worksheet = workbook.add_worksheet(sheet_name)
+                writer.sheets[sheet_name] = worksheet
+    
+                # Formatos
+                header_fmt = workbook.add_format({
+                    'bold': True,
+                    'align': 'center',
+                    'bg_color': '#D7E4BC',
+                    'border': 1
+                })
+                group_fmt = workbook.add_format({
+                    'bold': True,
+                    'font_size': 12,
+                    'bg_color': '#F7F7F7'
+                })
+                date_fmt = workbook.add_format({'num_format': 'dd/mm/yyyy'})
+    
+                row = 0
+                # Itera por cada grupo de consorciado
+                for consorciado, group in df_export.groupby('CONSORCIADO'):
+                    # Extrai menor data de venda (se houver)
+                    data_info = ""
+                    if 'DATA VENDA' in group.columns:
+                        datas = group['DATA VENDA'].dropna()
+                        if not datas.empty:
+                            data_min = datas.min().strftime('%d/%m/%Y')
+                            data_info = f" - {data_min}"
+    
+                    # Remove colunas auxiliares para display
+                    cols_to_drop = [c for c in ['CONSORCIADO', 'DATA VENDA'] if c in group.columns]
+                    display_group = group.drop(columns=cols_to_drop)
+    
+                    # Identifica colunas de data para formatação
+                    date_cols = [col for col in display_group.columns 
+                                if pd.api.types.is_datetime64_any_dtype(display_group[col])]
+    
+                    # Cabeçalho do grupo
+                    titulo_grupo = f"{consorciado}{data_info}"
+                    worksheet.merge_range(row, 0, row, len(display_group.columns) - 1, titulo_grupo, group_fmt)
                     row += 1
-
-                # Linha em branco
-                row += 1
-
-            # Ajusta largura das colunas (sem CONSORCIADO/DATA VENDA)
-            cols_to_measure = [col for col in df.columns if col not in ['NOME CONSORCIADO', 'DATA VENDA']]
-            for i, col in enumerate(cols_to_measure):
-                max_len = max(
-                    df[col].astype(str).map(len).max(),
-                    len(col)
-                )
-                worksheet.set_column(i, i, max_len + 2)
-
+    
+                    # Cabeçalhos de colunas
+                    for col_num, col_name in enumerate(display_group.columns):
+                        worksheet.write(row, col_num, col_name, header_fmt)
+                    row += 1
+    
+                    # Conteúdo dos registros
+                    for rec in display_group.itertuples(index=False):
+                        for col_num, val in enumerate(rec):
+                            col_name = display_group.columns[col_num]
+                            # Aplica formatação de data se necessário
+                            if col_name in date_cols:
+                                worksheet.write(row, col_num, val, date_fmt)
+                            else:
+                                worksheet.write(row, col_num, val)
+                        row += 1
+    
+                    # Linha em branco entre grupos
+                    row += 1
+    
+                # Ajusta largura automática das colunas
+                for idx, col in enumerate(display_group.columns):
+                    max_len = max(
+                        display_group[col].astype(str).map(len).max(),
+                        len(col)
+                    )
+                    worksheet.set_column(idx, idx, max_len + 2)
+    
         messagebox.showinfo("Sucesso", f"Dados exportados!\n{filepath}")
+
 
     def generate(self):
         col = self.combo_columns.get()
