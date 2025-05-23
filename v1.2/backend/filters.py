@@ -4,6 +4,7 @@ from typing import Union
 
 def filter_status_atraso(df: pd.DataFrame) -> pd.DataFrame:
     """Retorna apenas vendas com status 'Em atraso'."""
+    print(df[df['STATUS COTA'] != 'A'])
     return df[df['STATUS COTA'] != 'A']
 
 def filter_by_year(df: pd.DataFrame, year: int) -> pd.DataFrame:
@@ -43,12 +44,14 @@ def total_liquido_por_vendedor(df: pd.DataFrame) -> pd.DataFrame:
         .rename(columns={'LÍQUIDO R$': 'Total Líquido'})
         .sort_values(by='Total Líquido', ascending=False)
     )
+    print(result)
 
     return result
 
 
 def total_liquido_por_consorcio_vendedor(df: pd.DataFrame) -> pd.DataFrame:
     """Agrupa consorciado e vendedor somando o valor líquido."""
+    print(df.groupby(['NOME CONSORCIADO', 'VENDEDOR'])['LÍQUIDO R$'].sum().reset_index())
     return df.groupby(['NOME CONSORCIADO', 'VENDEDOR'])['LÍQUIDO R$'].sum().reset_index()
 
 def relatorio_por_consorciado(df: pd.DataFrame) -> dict:
@@ -68,6 +71,7 @@ def relatorio_por_consorciado(df: pd.DataFrame) -> dict:
             'vendedores': vendedores,
             'total': total_consorciado
         }
+        print(result)
     return result
 
 # ————— Novas funções para cálculo de inadimplentes —————

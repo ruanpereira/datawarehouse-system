@@ -167,7 +167,7 @@ class App(tk.Tk):
             control_frame,
             text="Exportar para Excel",
             style='TButton',
-            command=lambda: self.export_to_excel(df, title)
+            command=lambda: [ win.destroy(), self.export_to_excel(df, title)]
         ).pack(side='right')
 
         # Treeview
@@ -292,7 +292,7 @@ class App(tk.Tk):
                     worksheet.set_column(idx, idx, max_len + 2)
     
         messagebox.showinfo("Sucesso", f"Dados exportados!\n{filepath}")
-
+    
 
     def generate(self):
         col = self.combo_columns.get()
