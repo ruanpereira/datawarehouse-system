@@ -7,13 +7,14 @@ from data.exportdata import ExportFile
 
 
 
+
 class App(
     tk.Tk,
     StyleDefault,
     MainUIBuilder,
     FileManager,
     DataFrameViewer,
-    ExportFile
+    ExportFile,
 ):
     def __init__(self):
         super().__init__()

@@ -1,8 +1,10 @@
 from modulos import * 
+from interface.testchoice import DbOrNot
 
-
-class MainUIBuilder:
+class MainUIBuilder(DbOrNot):
     def setup_UI(self):
+        self.choice_DB()
+        print(self.functionExport)
         # Constrói toda a interface gráfica
         main_frame = ttk.Frame(self, padding=20)
         main_frame.pack(expand=True, fill='both')
