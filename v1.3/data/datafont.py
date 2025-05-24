@@ -1,12 +1,18 @@
 from modulos import *
-from interface.styles import StyleDefault
+from data.db import *
 
-class DbOrNot:
+class DataOrigin:
     def __init__(self):
         self.functionExport = None
     
     def setFunctionExport(self, value):
         self.functionExport = value
+    def ExecuteFunction(self, *args, **kwargs):
+        if self.functionExport: 
+            return self.functionExport(*args, **kwargs)
+        else: 
+            print("Erro no choices[DataOrigin]")
+            return None
     def choice_DB(self, title="Selecione a origem dos dados"):
         win = tk.Toplevel(self)
         win.title(title)
@@ -40,7 +46,7 @@ class DbOrNot:
             inner_frame,
             text="🗄️ Banco de Dados",
             style='TButton',
-            command=lambda: [print("Banco selecionado!"), self.setFunctionExport("Banco de dados"), win.destroy()]
+            command=lambda: [print("Banco selecionado!"), self.setFunctionExport("Banco de dados"), init_db(), win.destroy()]
         )
         btn_db.grid(row=0, column=1, padx=20, pady=20)
 

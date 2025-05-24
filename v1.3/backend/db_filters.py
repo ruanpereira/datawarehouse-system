@@ -9,9 +9,9 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from data.db import Session, vendas
 
 
-def filter_status_atraso() -> pd.DataFrame:
+def filter_status_atraso_db() -> pd.DataFrame:
     """Retorna apenas vendas com status 'Em atraso'."""
-    print("DEBUG: Calling filter_status_atraso()")
+    print("DEBUG: Calling filter_status_atraso_db()")
     with Session() as session:
         stmt = select(vendas).where(vendas.c.status_cota != 'A')
         print(f"DEBUG: Executing SQL: {stmt}")
@@ -20,9 +20,9 @@ def filter_status_atraso() -> pd.DataFrame:
     return pd.DataFrame(records)
 
 
-def filter_by_year(year: int) -> pd.DataFrame:
+def filter_by_year_db(year: int) -> pd.DataFrame:
     """Retorna vendas ocorridas no ano especificado."""
-    print(f"DEBUG: Calling filter_by_year(year={year})")
+    print(f"DEBUG: Calling filter_by_year_db(year={year})")
     with Session() as session:
         stmt = select(vendas).where(extract('year', vendas.c.data_venda) == year)
         print(f"DEBUG: Executing SQL: {stmt}")
@@ -31,12 +31,12 @@ def filter_by_year(year: int) -> pd.DataFrame:
     return pd.DataFrame(records)
 
 
-def total_liquido_por_vendedor() -> pd.DataFrame:
+def total_liquido_por_vendedor_db() -> pd.DataFrame:
     """
     Agrupa vendas por vendedor somando o valor líquido,
     renomeia a coluna para 'Total Líquido' e ordena do maior para o menor valor.
     """
-    print("DEBUG: Calling total_liquido_por_vendedor()")
+    print("DEBUG: Calling total_liquido_por_vendedor_db()")
     with Session() as session:
         stmt = (
             select(
@@ -54,9 +54,9 @@ def total_liquido_por_vendedor() -> pd.DataFrame:
     return df
 
 
-def total_liquido_por_consorcio_vendedor() -> pd.DataFrame:
+def total_liquido_por_consorcio_vendedor_db() -> pd.DataFrame:
     """Agrupa consorciado e vendedor somando o valor líquido."""
-    print("DEBUG: Calling total_liquido_por_consorcio_vendedor()")
+    print("DEBUG: Calling total_liquido_por_consorcio_vendedor_db()")
     with Session() as session:
         stmt = (
             select(
@@ -73,12 +73,12 @@ def total_liquido_por_consorcio_vendedor() -> pd.DataFrame:
     return df
 
 
-def relatorio_por_consorciado() -> dict:
+def relatorio_por_consorciado_db() -> dict:
     """
     Gera relatório por consorciado com data da primeira venda,
     vendedores (soma líquida *1.2) e total geral.
     """
-    print("DEBUG: Calling relatorio_por_consorciado()")
+    print("DEBUG: Calling relatorio_por_consorciado_db()")
     report = {}
     with Session() as session:
         consorciados = session.execute(
@@ -183,11 +183,11 @@ def count_inadimplentes(
 
 if __name__ == "__main__":
     print("=== Teste Rápido de Consultas ===")
-    df_atraso = filter_status_atraso()
+    df_atraso = filter_status_atraso_db()
     print(f"Vendas em atraso: {len(df_atraso)} linhas")
-    df_2025 = filter_by_year(2025)
+    df_2025 = filter_by_year_db(2025)
     print(f"Vendas em 2025: {len(df_2025)} linhas")
-    df_vendedor = total_liquido_por_vendedor()
+    df_vendedor = total_liquido_por_vendedor_db()
     print("Total líquido por vendedor:")
     print(df_vendedor)
     print(df_2025)

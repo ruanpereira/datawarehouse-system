@@ -3,7 +3,7 @@ import pandas as pd
 from PyPDF2 import PdfReader
 from datetime import datetime
 
-class DataLoader:
+class DataLoader_db:
     """Responsável por carregar e tratar diferentes formatos de dados em DataFrame."""
     SUPPORTED_EXTENSIONS = {'.csv', '.xls', '.xlsx', '.pdf'}
     
@@ -32,9 +32,9 @@ class DataLoader:
     }
 
     @staticmethod
-    def load(file_path: str) -> pd.DataFrame:
+    def load_db(file_path: str) -> pd.DataFrame:
         ext = os.path.splitext(file_path)[1].lower()
-        if ext not in DataLoader.SUPPORTED_EXTENSIONS:
+        if ext not in DataLoader_db.SUPPORTED_EXTENSIONS:
             raise ValueError(f"Formato não suportado: {ext}")
 
         # Carregar dados brutos
@@ -43,16 +43,16 @@ class DataLoader:
         elif ext in ('.xls', '.xlsx'):
             df = pd.read_excel(file_path, engine='openpyxl')
         else:
-            df = DataLoader._handle_pdf(file_path)
+            df = DataLoader_db._handle_pdf(file_path)
 
         # Pré-processamento
-        df = DataLoader._preprocess_data(df)
+        df = DataLoader_db._preprocess_data(df)
         return df
 
     @staticmethod
     def _preprocess_data(df: pd.DataFrame) -> pd.DataFrame:
         # Renomear colunas
-        df = df.rename(columns=DataLoader.COLUMN_MAPPING)
+        df = df.rename(columns=DataLoader_db.COLUMN_MAPPING)
         
         # Converter datas
         date_columns = ['data_venda', 'data_alocacao']

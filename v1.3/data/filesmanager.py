@@ -9,10 +9,10 @@ class FileManager:
             return
 
         try:
-            df = DataLoader.load(path)
-            batch_id = insert_upload_and_vendas(df, path)
+            df = DataLoader_db.load_db(path) if self.functionExport == "Banco de dados" else DataLoader_local.load_local(path)
+            batch_id = insert_upload_and_vendas(df, path) if self.functionExport == "Banco de dados" else None
             self.df = df
-            self.current_batch_id = batch_id
+            self.current_batch_id = batch_id if self.functionExport == "Banco de dados" else None
             self.numeric_columns = df.select_dtypes(include=['number']).columns.tolist()
             self.combo_columns['values'] = df.columns.tolist()
             self.file_var.set(path)
