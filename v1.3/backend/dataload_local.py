@@ -23,7 +23,6 @@ class DataLoader_local:
             df = pd.DataFrame({'Texto': [text]})
             return df
 
-        # Aplicar filtros em colunas se "VENDEDOR" estiver presente
         if 'VENDEDOR' in df.columns:
             df = df[df['VENDEDOR'].apply(lambda x: isinstance(x, str) and x.strip() != "")]
             invalid_keywords = ["ENCERRAMENTO", "TOTAL", "DESCONTOS", "R\$"]

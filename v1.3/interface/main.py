@@ -1,7 +1,6 @@
 import sys
 import os
 
-# Adiciona a pasta raiz ao PYTHONPATH
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from gui import App

@@ -18,19 +18,15 @@ def total_liquido_por_vendedor_local(df: pd.DataFrame) -> pd.DataFrame:
     ordena do maior para o menor valor.
     Exclui linhas onde 'VENDEDOR' não seja texto (evita valores numéricos ou linhas de totalização prévias).
     """
-    # Cópia para não alterar df original
     df_copy = df.copy()
 
-    # Verifica se as colunas existem
     for col in ('VENDEDOR', 'LÍQUIDO R$'):
         if col not in df_copy.columns:
             raise KeyError(f"Coluna '{col}' não encontrada no DataFrame.")
 
-    # Filtra apenas vendedores "reais" (tipos string) e não-vazios
     mask_valid = df_copy['VENDEDOR'].apply(lambda x: isinstance(x, str) and x.strip() != "")
     df_copy = df_copy.loc[mask_valid]
 
-    # Converte líquido para numérico, substitui não-numéricos por zero
     df_copy['LÍQUIDO R$'] = (
         pd.to_numeric(df_copy['LÍQUIDO R$'], errors='coerce')
           .fillna(0)
@@ -74,7 +70,6 @@ def relatorio_por_consorciado_local(df: pd.DataFrame) -> dict:
         print(result)
     return result
 
-# ————— Novas funções para cálculo de inadimplentes —————
 
 def filter_em_atraso(
     df: pd.DataFrame,

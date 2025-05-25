@@ -62,7 +62,6 @@ def insert_upload_and_vendas(df, origem_arquivo):
     batch_id = str(uuid.uuid4())
     sess = Session()
 
-    # ❌ Filtrar linhas não relacionadas a vendas reais
     invalid_keywords = ["ENCERRAMENTO", "TOTAL", "DESCONTOS", "R\$"]
     keyword_pattern = '|'.join(invalid_keywords)
     regex_numeric = r'^\s*\d+[\d.,]*\s*$'
@@ -71,25 +70,20 @@ def insert_upload_and_vendas(df, origem_arquivo):
     df = df[~df['vendedor'].str.upper().str.contains(keyword_pattern, regex=True)]
     df = df[~df['vendedor'].str.match(regex_numeric)]
 
-    # Garantir conversão final para tipos nativos
     records = df.replace({pd.NaT: None})
     records = records.where(pd.notnull(records), None)
 
-    # 1) Insere metadados
     sess.execute(uploads.insert().values(
         id=batch_id,
         origem_arquivo=os.path.basename(origem_arquivo),
         num_registros=len(df)
     ))
 
-    # 2) Insere linhas
     records['batch_id'] = batch_id
     records['origem_arquivo'] = os.path.basename(origem_arquivo)
 
-    # Converter para lista de dicionários
     data_to_insert = records.to_dict(orient='records')
 
-    # Substituir valores numpy por nativos
     for item in data_to_insert:
         for key, value in item.items():
             if isinstance(value, (np.generic)):

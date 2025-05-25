@@ -17,7 +17,6 @@ class FileManager:
             self.combo_columns['values'] = df.columns.tolist()
             self.file_var.set(path)
 
-            # Mostrar botões de filtro após carregar
             for btn in [
                 self.btn_atraso,
                 self.btn_ano,

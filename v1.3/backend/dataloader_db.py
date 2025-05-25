@@ -37,7 +37,6 @@ class DataLoader_db:
         if ext not in DataLoader_db.SUPPORTED_EXTENSIONS:
             raise ValueError(f"Formato não suportado: {ext}")
 
-        # Carregar dados brutos
         if ext == '.csv':
             df = pd.read_csv(file_path, delimiter=';', decimal=',', dayfirst=True)
         elif ext in ('.xls', '.xlsx'):
@@ -45,16 +44,13 @@ class DataLoader_db:
         else:
             df = DataLoader_db._handle_pdf(file_path)
 
-        # Pré-processamento
         df = DataLoader_db._preprocess_data(df)
         return df
 
     @staticmethod
     def _preprocess_data(df: pd.DataFrame) -> pd.DataFrame:
-        # Renomear colunas
         df = df.rename(columns=DataLoader_db.COLUMN_MAPPING)
         
-        # Converter datas
         date_columns = ['data_venda', 'data_alocacao']
         for col in date_columns:
             if col in df.columns:
@@ -65,7 +61,6 @@ class DataLoader_db:
                 ).dt.tz_localize(None)  # Remove timezone
                 df[col] = df[col].where(df[col].notna(), None)
 
-        # Converter valores numéricos
         numeric_cols = [
             'comissao_percentual', 'base_calc_comissao', 'comissao_reais',
             'estorno_reais', 'cancelamento_cota_reais', 'base_reais', 'liquido_reais'
@@ -82,7 +77,6 @@ class DataLoader_db:
                     .astype(float)
                 )
         
-        # Tratar valores nulos
         df = df.replace({
             'NULL': None,
             'null': None,

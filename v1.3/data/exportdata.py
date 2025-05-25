@@ -10,11 +10,9 @@ class ExportFile:
             return
 
         df_export = df.copy()
-        # Normaliza coluna CONSORCIADO
         if 'NOME CONSORCIADO' in df_export.columns and 'CONSORCIADO' not in df_export.columns:
             df_export.rename(columns={'NOME CONSORCIADO': 'CONSORCIADO'}, inplace=True)
 
-        # Converte datas
         for col in ['DATA VENDA', 'DATA ALOCAÇÃO']:
             if col in df_export.columns:
                 df_export[col] = pd.to_datetime(df_export[col], errors='coerce')
