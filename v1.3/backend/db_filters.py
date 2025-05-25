@@ -1,3 +1,4 @@
+from decimal import Decimal
 import pandas as pd
 from datetime import datetime
 from typing import Union
@@ -101,7 +102,7 @@ def relatorio_por_consorciado_db() -> dict:
             agg = {}
             for r in rows:
                 agg[r.vendedor] = agg.get(r.vendedor, 0) + r.liquido_reais
-            vendedores = {v: total * 1.2 for v, total in agg.items()}
+            vendedores = {v: total * Decimal("1.2") for v, total in agg.items()}
             total_geral = sum(vendedores.values())
             report[nome] = {
                 'data_venda': data_venda,

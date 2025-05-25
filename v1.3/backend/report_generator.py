@@ -165,17 +165,27 @@ class RelatorioToDf:
     def generate(relatorio: Dict[str, Dict[str, Any]]) -> pd.DataFrame:
         """
         Converte dados de relatório em DataFrame consolidado.
-        
+
         Args:
-            relatorio (Dict): Dados estruturados do relatório
-            
+        relatorio (Dict): Dados estruturados do relatório
+
         Returns:
-            pd.DataFrame: DataFrame consolidado
+        pd.DataFrame: DataFrame consolidado
         """
         dfs = []
         for consorciado, data in relatorio.items():
-            df = data['vendedores'].copy()
+            vendedores = data['vendedores']
+
+            if isinstance(vendedores, dict):
+                if all(isinstance(v, list) for v in vendedores.values()):
+                    df = pd.DataFrame(vendedores)
+                else:
+                    df = pd.DataFrame([vendedores])
+            else:
+                df = vendedores.copy()
+
             df['CONSORCIADO'] = consorciado
             df['DATA VENDA'] = data['data_venda']
             dfs.append(df)
+
         return pd.concat(dfs, ignore_index=True)

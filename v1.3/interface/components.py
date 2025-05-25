@@ -37,28 +37,28 @@ class MainUIBuilder(DataOrigin):
         self.btn_atraso = ttk.Button(
             filters_frame,
             text="Em Atraso",
-            command=lambda: self.display_df(filter_status_atraso_db(self.df) if self.functionExport == "Banco de dados" else filter_status_atraso_local(self.df), "Vendas em Atraso")
+            command=lambda: self.display_df(filter_status_atraso_db() if self.functionExport == "Banco de dados" else filter_status_atraso_local(self.df), "Vendas em Atraso")
         )
         self.btn_ano = ttk.Button(
             filters_frame,
             text="Ano 2025",
-            command=lambda: self.display_df(filter_by_year_db(self.df, 2025) if self.functionExport == "Banco de dados" else filter_by_year_local(self.df, 2025), "Vendas 2025")
+            command=lambda: self.display_df(filter_by_year_db(2025) if self.functionExport == "Banco de dados" else filter_by_year_local(self.df, 2025), "Vendas 2025")
         )
         self.btn_total = ttk.Button(
             filters_frame,
             text="Total Líq. por Vendedor",
-            command=lambda: self.display_df(total_liquido_por_vendedor_db(self.df) if self.functionExport == "Banco de dados" else total_liquido_por_vendedor_local(self.df), "Total Líquido")
+            command=lambda: self.display_df(total_liquido_por_vendedor_db() if self.functionExport == "Banco de dados" else total_liquido_por_vendedor_local(self.df), "Total Líquido")
         )
         self.btn_total_consorcio = ttk.Button(
             filters_frame,
             text="Total Líq. por Consorcio e Vendedor",
-            command=lambda: self.display_df(total_liquido_por_consorcio_vendedor_db(self.df) if self.functionExport == "Banco de dados" else total_liquido_por_consorcio_vendedor_local(self.df), "Total Líquido")
+            command=lambda: self.display_df(total_liquido_por_consorcio_vendedor_db() if self.functionExport == "Banco de dados" else total_liquido_por_consorcio_vendedor_local(self.df), "Total Líquido")
         )
         self.btn_total_consorcio_relatorio = ttk.Button(
             filters_frame,
             text="Relatório Consorciados",
             command=lambda: self.display_df(
-                RelatorioToDf.generate(relatorio_por_consorciado_db()),
+                RelatorioToDf.generate(relatorio_por_consorciado_db() if self.functionExport == "Banco de dados" else relatorio_por_consorciado_local(self.df)),
                 "Total Líquido - Relatório"
             )
         )

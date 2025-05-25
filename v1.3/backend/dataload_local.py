@@ -1,5 +1,6 @@
 import os
 import pandas as pd
+import re
 from PyPDF2 import PdfReader
 
 class DataLoader_local:
@@ -20,4 +21,15 @@ class DataLoader_local:
             reader = PdfReader(file_path)
             text = "\n".join(page.extract_text() or '' for page in reader.pages)
             df = pd.DataFrame({'Texto': [text]})
+            return df
+
+        # Aplicar filtros em colunas se "VENDEDOR" estiver presente
+        if 'VENDEDOR' in df.columns:
+            df = df[df['VENDEDOR'].apply(lambda x: isinstance(x, str) and x.strip() != "")]
+            invalid_keywords = ["ENCERRAMENTO", "TOTAL", "DESCONTOS", "R\$"]
+            keyword_pattern = '|'.join(invalid_keywords)
+            regex_numeric = r'^\s*\d+[\d.,]*\s*$'
+            df = df[~df['VENDEDOR'].str.upper().str.contains(keyword_pattern, regex=True)]
+            df = df[~df['VENDEDOR'].str.match(regex_numeric)]
+
         return df
