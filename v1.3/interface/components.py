@@ -2,6 +2,11 @@ from modulos import *
 from data.datafont import DataOrigin
 
 class MainUIBuilder(DataOrigin):
+    def reset_UI(self):
+        for widget in self.winfo_children():
+            widget.destroy()
+        self.setup_UI()
+
     def setup_UI(self):
         self.choice_DB()
         print(self.functionExport)
@@ -11,13 +16,21 @@ class MainUIBuilder(DataOrigin):
         main_frame = ttk.Frame(self, padding=20)
         main_frame.pack(expand=True, fill='both')
 
+        # Botão de troca de modo (Banco de dados <-> Local)
+        ttk.Button(
+            main_frame,
+            text="Trocar Modo",
+            command=self.reset_UI
+        ).grid(row=0, column=0, sticky='nw', padx=5, pady=5)
+        main_frame.pack(expand=True, fill='both')
+
         # Configurar grid principal
         main_frame.columnconfigure(0, weight=1)
         main_frame.rowconfigure(4, weight=1)
 
         # Frame de Seleção de Arquivo
         file_frame = ttk.LabelFrame(main_frame, text="Seleção de arquivo para upload no banco de dados" if self.functionExport == "Banco de dados" else " Seleção de Arquivo ", padding=15)
-        file_frame.grid(row=0, column=0, padx=5, pady=5, sticky='ew')
+        file_frame.grid(row=1, column=0, padx=5, pady=5, sticky='ew')
         file_frame.columnconfigure(0, weight=1)
 
         self.file_var = tk.StringVar(value="Nenhum arquivo selecionado")

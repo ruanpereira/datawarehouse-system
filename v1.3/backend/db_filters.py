@@ -118,21 +118,20 @@ def relatorio_por_consorciado_db(df: pd.DataFrame) -> dict:
     Gera relatório por consorciado com data da primeira venda,
     vendedores (soma líquida *1.2) e total geral.
     """
-    print("DEBUG: Calling relatorio_por_consorciado_db()")
     report = {}
-    if df.empty: 
+    if not df.empty: 
         grouped = df.groupby('nome_consorciado')
         for consorciado, group in grouped:
             data_venda = group['data_venda'].iloc[0]
             vendedores = group.groupby('vendedor')['liquido_reais'].sum().reset_index()
-            vendedores['Total'] = vendedores['liquido_reais'] * 1.2  # adiciona 20%
+            vendedores['Total'] = float(vendedores['liquido_reais']) * 1.2  # adiciona 20%
             total_consorciado = vendedores['Total'].sum()
             report[consorciado] = {
                 'data_venda': data_venda,
                 'vendedores': vendedores,
                 'total': total_consorciado
             }
-            print(report)
+            print(df.columns)
         return report
     else:
         with Session() as session:
