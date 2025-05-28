@@ -5,36 +5,41 @@ from datetime import datetime, timedelta
 
 fake = Faker('pt_BR')
 
-num_registros = 10000
+num_registros = 1000
 
-status_cota = ['Ativa', 'Cancelada', 'Quitada', 'Em atraso']
-categorias = ['Automóvel', 'Imóvel', 'Motocicleta', 'Caminhão']
-regras = ['Normal', 'Promocional', 'Especial', 'Corretor']
-consorciado = ["coca-cola", "Intel", "Lenovo", "Positivo", "Carol LTDA", "Felipe INC."]
-vendedores = [fake.name() for _ in range(0, 5)]
+status_cota = ['A', 'M',]
+categorias = ['000085', '000123', '000456', '000789']
+regras = ['006040', '000085', '005000', '001234']
+consorciado = ["coca-cola2", "Intel2", "Lenovo2", "Positivo2", "Agosto LTDA2", "Ruan INC.2"]
+vendedores = [fake.name() for _ in range(5)]
 
-# Gerando os dados
+def gerar_codigo():
+    return f"{random.randint(0,9999):04d}-{random.randint(0,9999):04d}-00"
+
 dados = []
 for _ in range(num_registros):
     data_venda = fake.date_between(start_date='-1y', end_date='today')
-    contrato = fake.random_number(digits=8)
-    parc_lib = f"{random.randint(1, 80)}/{random.randint(12, 120)}"
-    comissao_percent = round(random.uniform(1.0, 10.0), 2)
+    contrato = f"{random.randint(0, 9999999):07d}"
+    parc_lib = f"{random.randint(1, 80)} / {random.randint(12, 120)}"
+    
+    comissao_percent = 0.40
     base_calc = round(random.uniform(5000, 50000), 2)
-    comissao = round(base_calc * comissao_percent / 100, 2)
+    comissao = round(base_calc * comissao_percent, 2)
     estorno = round(comissao * random.uniform(0, 0.3), 2) if random.random() > 0.7 else 0
     cancelamento = round(comissao * random.uniform(0, 0.5), 2) if random.random() > 0.8 else 0
     base = base_calc - estorno - cancelamento
     liquido = comissao - estorno - cancelamento
     
-    
     dados.append({
         'DATA VENDA': data_venda,
-        'CÓD COMISSIONADO': fake.random_number(digits=6),
-        'CÓD PV': fake.random_number(digits=5),
+        'DATA ALOCAÇÃO': data_venda + timedelta(days=random.randint(1, 15)),
+        'BEM': gerar_codigo(),
+        'CÓD COMISSIONADO': random.randint(100000, 999999),
+        'CÓD PV': random.randint(10000, 99999),
+        'CÓD EQUIPE': random.randint(1000, 9999),
         'CONTRATO': contrato,
-        'CONSORCIADO': random.choice(consorciado),
-        'NOME CONSORCIADO': fake.name(),
+        'CONSORCIADO': gerar_codigo(),
+        'NOME CONSORCIADO': random.choice(consorciado),
         'STATUS COTA': random.choice(status_cota),
         'PARC/LIB': parc_lib,
         'REGRA': random.choice(regras),
@@ -45,18 +50,35 @@ for _ in range(num_registros):
         'ESTORNO R$': estorno,
         'CANCELAMENTO COTA R$': cancelamento,
         'BASE R$': base,
-        'LÍQUIDO R$': liquido,
+        'LÍQUIDO R$': liquido,  # Mantemos como float
         'VENDEDOR': random.choice(vendedores)
     })
 
-df = pd.DataFrame(dados)
-
-colunas_ordenadas = [
-    'DATA VENDA', 'CÓD COMISSIONADO', 'CÓD PV', 'CONTRATO', 'CONSORCIADO',
-    'NOME CONSORCIADO', 'STATUS COTA', 'PARC/LIB', 'REGRA', 'CATEGORIA',
-    'COMISSAO %', 'BASE CÁLC COMISSAO', 'COMISSAO R$', 'ESTORNO R$',
-    'CANCELAMENTO COTA R$', 'BASE R$', 'LÍQUIDO R$', 'VENDEDOR'
-]
-df = df[colunas_ordenadas]
-
-df.to_excel('dados_comissao_fake.xlsx', index=False)
+    df = pd.DataFrame(dados)
+    
+    # Aplicamos a formatação apenas na exportação
+    def formatar_excel(workbook):
+        num_fmt = workbook.add_format({'num_format': '#,##0.00'})
+        perc_fmt = workbook.add_format({'num_format': '0.00%'})
+        money_fmt = workbook.add_format({'num_format': 'R$ #,##0.00'})
+        
+        return {
+            'BASE CÁLC COMISSAO': money_fmt,
+            'COMISSAO R$': money_fmt,
+            'ESTORNO R$': money_fmt,
+            'CANCELAMENTO COTA R$': money_fmt,
+            'BASE R$': money_fmt,
+            'LÍQUIDO R$': money_fmt,
+            'COMISSAO %': perc_fmt
+        }
+    
+with pd.ExcelWriter('dados_comissao_fake2.xlsx', engine='xlsxwriter') as writer:
+    df.to_excel(writer, index=False)
+    workbook = writer.book
+    worksheet = writer.sheets['Sheet1']
+    
+    formatos = formatar_excel(workbook)
+    
+    for col, fmt in formatos.items():
+        col_idx = df.columns.get_loc(col)
+        worksheet.set_column(col_idx, col_idx, None, fmt)
