@@ -9,6 +9,7 @@ from sqlalchemy import (create_engine, Column, Integer, String, DateTime,
                         Numeric, MetaData, Table)
 from sqlalchemy.orm import sessionmaker
 from dotenv import load_dotenv
+from sqlalchemy import select
 
 load_dotenv()
 
@@ -100,4 +101,24 @@ def query_vendas_by_batch(batch_id):
     sess = Session()
     res = sess.execute(vendas.select().where(vendas.c.batch_id == batch_id)).mappings().all()
     sess.close()
+    return pd.DataFrame(res)
+def query_vendas_by_name(origem_arquivo):
+    import pandas as pd
+    session = Session()
+
+    # Buscar o batch_id (id da tabela uploads) com base na origem_arquivo
+    batch_id = session.execute(
+        select(uploads.c.id).where(uploads.c.origem_arquivo == origem_arquivo)
+    ).scalar_one_or_none()
+
+    if not batch_id:
+        session.close()
+        return pd.DataFrame()  # Nenhum upload encontrado
+
+    # Agora buscar todas as vendas com esse batch_id
+    res = session.execute(
+        select(vendas).where(vendas.c.batch_id == batch_id)
+    ).mappings().all()
+
+    session.close()
     return pd.DataFrame(res)

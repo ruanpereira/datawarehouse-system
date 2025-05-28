@@ -23,5 +23,5 @@ from backend.local_filters import (
     total_credito_em_atraso # tem que arrumar dps
 )
 from backend.report_generator import ReportGenerator, RelatorioToDf
-from data.db import insert_upload_and_vendas
+from data.db import insert_upload_and_vendas, Session, uploads, query_vendas_by_batch
 import pandas as pd

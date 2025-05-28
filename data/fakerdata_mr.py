@@ -10,7 +10,7 @@ num_registros = 1000
 status_cota = ['A', 'M',]
 categorias = ['000085', '000123', '000456', '000789']
 regras = ['006040', '000085', '005000', '001234']
-consorciado = ["coca-cola", "Intel", "Lenovo", "Positivo", "Agosto LTDA", "Ruan INC."]
+consorciado = ["coca-cola2", "Intel2", "Lenovo2", "Positivo2", "Agosto LTDA2", "Ruan INC.2"]
 vendedores = [fake.name() for _ in range(5)]
 
 def gerar_codigo():
@@ -72,7 +72,7 @@ for _ in range(num_registros):
             'COMISSAO %': perc_fmt
         }
     
-with pd.ExcelWriter('dados_comissao_fake.xlsx', engine='xlsxwriter') as writer:
+with pd.ExcelWriter('dados_comissao_fake2.xlsx', engine='xlsxwriter') as writer:
     df.to_excel(writer, index=False)
     workbook = writer.book
     worksheet = writer.sheets['Sheet1']

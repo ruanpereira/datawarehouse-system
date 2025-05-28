@@ -5,6 +5,8 @@ class MainUIBuilder(DataOrigin):
     def setup_UI(self):
         self.choice_DB()
         print(self.functionExport)
+        if self.functionExport == "Banco de dados":
+            self.choiceTable()
         # Constrói toda a interface gráfica
         main_frame = ttk.Frame(self, padding=20)
         main_frame.pack(expand=True, fill='both')
@@ -14,7 +16,7 @@ class MainUIBuilder(DataOrigin):
         main_frame.rowconfigure(4, weight=1)
 
         # Frame de Seleção de Arquivo
-        file_frame = ttk.LabelFrame(main_frame, text=" Seleção de Arquivo ", padding=15)
+        file_frame = ttk.LabelFrame(main_frame, text="Seleção de arquivo para upload no banco de dados" if self.functionExport == "Banco de dados" else " Seleção de Arquivo ", padding=15)
         file_frame.grid(row=0, column=0, padx=5, pady=5, sticky='ew')
         file_frame.columnconfigure(0, weight=1)
 

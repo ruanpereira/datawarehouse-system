@@ -1,6 +1,7 @@
 from modulos import * 
 from interface.styles import StyleDefault
 from interface.components import MainUIBuilder
+from interface.search_db import TableSelect
 from interface.dataframeview import DataFrameViewer
 from data.filesmanager import FileManager
 from data.exportdata import ExportFile
@@ -15,6 +16,7 @@ class App(
     FileManager,
     DataFrameViewer,
     ExportFile,
+    TableSelect,
 ):
     def __init__(self):
         super().__init__()
