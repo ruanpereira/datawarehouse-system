@@ -10,107 +10,161 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from data.db import Session, vendas
 
 
-def filter_status_atraso_db() -> pd.DataFrame:
+def filter_status_atraso_db(df: pd.DataFrame) -> pd.DataFrame:
     """Retorna apenas vendas com status 'Em atraso'."""
     print("DEBUG: Calling filter_status_atraso_db()")
-    with Session() as session:
-        stmt = select(vendas).where(vendas.c.status_cota != 'A')
-        print(f"DEBUG: Executing SQL: {stmt}")
-        records = session.execute(stmt).mappings().all()
-        print(f"DEBUG: Retrieved {len(records)} rows")
-    return pd.DataFrame(records)
+    if not df.empty:
+        print(df)
+        return df[df['status_cota'] != 'A']
+    else:
+        with Session() as session:
+            stmt = select(vendas).where(vendas.c.status_cota != 'A')
+            print(f"DEBUG: Executing SQL: {stmt}")
+            records = session.execute(stmt).mappings().all()
+            print(f"DEBUG: Retrieved {len(records)} rows")
+        return pd.DataFrame(records)
 
 
-def filter_by_year_db(year: int) -> pd.DataFrame:
+def filter_by_year_db(df: pd.DataFrame, year: int) -> pd.DataFrame:
     """Retorna vendas ocorridas no ano especificado."""
     print(f"DEBUG: Calling filter_by_year_db(year={year})")
-    with Session() as session:
-        stmt = select(vendas).where(extract('year', vendas.c.data_venda) == year)
-        print(f"DEBUG: Executing SQL: {stmt}")
-        records = session.execute(stmt).mappings().all()
-        print(f"DEBUG: Retrieved {len(records)} rows")
-    return pd.DataFrame(records)
+    if not df.empty:
+        return df[df['data_venda'].dt.year == year]
+    else:
+        with Session() as session:
+            stmt = select(vendas).where(extract('year', vendas.c.data_venda) == year)
+            print(f"DEBUG: Executing SQL: {stmt}")
+            records = session.execute(stmt).mappings().all()
+            print(f"DEBUG: Retrieved {len(records)} rows")
+        return pd.DataFrame(records)
 
 
-def total_liquido_por_vendedor_db() -> pd.DataFrame:
+def total_liquido_por_vendedor_db(df: pd.DataFrame) -> pd.DataFrame:
     """
     Agrupa vendas por vendedor somando o valor líquido,
     renomeia a coluna para 'Total Líquido' e ordena do maior para o menor valor.
     """
     print("DEBUG: Calling total_liquido_por_vendedor_db()")
-    with Session() as session:
-        stmt = (
-            select(
-                vendas.c.vendedor,
-                func.sum(vendas.c.liquido_reais).label('total_liquido')
-            )
-            .where(vendas.c.vendedor != None)
-            .group_by(vendas.c.vendedor)
-            .order_by(func.sum(vendas.c.liquido_reais).desc())
+    if not df.empty:
+        df_copy = df.copy()
+
+        for col in ('vendedor', 'liquido_reais'):
+            if col not in df_copy.columns:
+                raise KeyError(f"Coluna '{col}' não encontrada no DataFrame.")
+
+        mask_valid = df_copy['vendedor'].apply(lambda x: isinstance(x, str) and x.strip() != "")
+        df_copy = df_copy.loc[mask_valid]
+
+        df_copy['liquido_reais'] = (
+            pd.to_numeric(df_copy['liquido_reais'], errors='coerce')
+              .fillna(0)
         )
-        print(f"DEBUG: Executing SQL: {stmt}")
-        rows = session.execute(stmt).all()
-        print(f"DEBUG: Retrieved {len(rows)} rows")
-    df = pd.DataFrame(rows, columns=['VENDEDOR', 'Total Líquido'])
-    return df
+
+        # Agrupa, soma, renomeia e ordena
+        result = (
+            df_copy
+            .groupby('vendedor', as_index=False)['liquido_reais']
+            .sum()
+            .rename(columns={'liquido_reais': 'Total Líquido'})
+            .sort_values(by='Total Líquido', ascending=False)
+        )
+        print(result)
+
+        return result
+
+    else:
+        with Session() as session:
+            stmt = (
+                select(
+                    vendas.c.vendedor,
+                    func.sum(vendas.c.liquido_reais).label('total_liquido')
+                )
+                .where(vendas.c.vendedor != None)
+                .group_by(vendas.c.vendedor)
+                .order_by(func.sum(vendas.c.liquido_reais).desc())
+            )
+            print(f"DEBUG: Executing SQL: {stmt}")
+            rows = session.execute(stmt).all()
+            print(f"DEBUG: Retrieved {len(rows)} rows")
+        df = pd.DataFrame(rows, columns=['VENDEDOR', 'Total Líquido'])
+        return df
 
 
-def total_liquido_por_consorcio_vendedor_db() -> pd.DataFrame:
+def total_liquido_por_consorcio_vendedor_db(df: pd.DataFrame) -> pd.DataFrame:
     """Agrupa consorciado e vendedor somando o valor líquido."""
     print("DEBUG: Calling total_liquido_por_consorcio_vendedor_db()")
-    with Session() as session:
-        stmt = (
-            select(
-                vendas.c.nome_consorciado,
-                vendas.c.vendedor,
-                func.sum(vendas.c.liquido_reais).label('total_liquido')
+    
+    if not df.empty:
+        return df.groupby(['nome_consorciado', 'vendedor'])['liquido_reais'].sum().reset_index()
+    else:
+        with Session() as session:
+            stmt = (
+                select(
+                    vendas.c.nome_consorciado,
+                    vendas.c.vendedor,
+                    func.sum(vendas.c.liquido_reais).label('total_liquido')
+                )
+                .group_by(vendas.c.nome_consorciado, vendas.c.vendedor)
             )
-            .group_by(vendas.c.nome_consorciado, vendas.c.vendedor)
-        )
-        print(f"DEBUG: Executing SQL: {stmt}")
-        rows = session.execute(stmt).all()
-        print(f"DEBUG: Retrieved {len(rows)} rows")
-    df = pd.DataFrame(rows, columns=['NOME CONSORCIADO', 'VENDEDOR', 'Total Líquido'])
-    return df
+            print(f"DEBUG: Executing SQL: {stmt}")
+            rows = session.execute(stmt).all()
+            print(f"DEBUG: Retrieved {len(rows)} rows")
+        df = pd.DataFrame(rows, columns=['NOME CONSORCIADO', 'VENDEDOR', 'Total Líquido'])
+        return df
 
 
-def relatorio_por_consorciado_db() -> dict:
+def relatorio_por_consorciado_db(df: pd.DataFrame) -> dict:
     """
     Gera relatório por consorciado com data da primeira venda,
     vendedores (soma líquida *1.2) e total geral.
     """
     print("DEBUG: Calling relatorio_por_consorciado_db()")
     report = {}
-    with Session() as session:
-        consorciados = session.execute(
-            select(vendas.c.nome_consorciado).distinct()
-        ).scalars().all()
-        print(f"DEBUG: Found {len(consorciados)} consorciados")
-        for nome in consorciados:
-            print(f"DEBUG: Processing consorciado={nome}")
-            rows = session.execute(
-                select(
-                    vendas.c.data_venda,
-                    vendas.c.vendedor,
-                    vendas.c.liquido_reais
-                ).where(vendas.c.nome_consorciado == nome)
-            ).all()
-            if not rows:
-                print(f"DEBUG: No vendas for {nome}")
-                continue
-            data_venda = rows[0].data_venda
-            agg = {}
-            for r in rows:
-                agg[r.vendedor] = agg.get(r.vendedor, 0) + r.liquido_reais
-            vendedores = {v: total * Decimal("1.2") for v, total in agg.items()}
-            total_geral = sum(vendedores.values())
-            report[nome] = {
+    if df.empty: 
+        grouped = df.groupby('nome_consorciado')
+        for consorciado, group in grouped:
+            data_venda = group['data_venda'].iloc[0]
+            vendedores = group.groupby('vendedor')['liquido_reais'].sum().reset_index()
+            vendedores['Total'] = vendedores['liquido_reais'] * 1.2  # adiciona 20%
+            total_consorciado = vendedores['Total'].sum()
+            report[consorciado] = {
                 'data_venda': data_venda,
                 'vendedores': vendedores,
-                'total': total_geral
+                'total': total_consorciado
             }
-            print(f"DEBUG: Report for {nome} -> total={total_geral}")
-    return report
+            print(report)
+        return report
+    else:
+        with Session() as session:
+            consorciados = session.execute(
+                select(vendas.c.nome_consorciado).distinct()
+            ).scalars().all()
+            print(f"DEBUG: Found {len(consorciados)} consorciados")
+            for nome in consorciados:
+                print(f"DEBUG: Processing consorciado={nome}")
+                rows = session.execute(
+                    select(
+                        vendas.c.data_venda,
+                        vendas.c.vendedor,
+                        vendas.c.liquido_reais
+                    ).where(vendas.c.nome_consorciado == nome)
+                ).all()
+                if not rows:
+                    print(f"DEBUG: No vendas for {nome}")
+                    continue
+                data_venda = rows[0].data_venda
+                agg = {}
+                for r in rows:
+                    agg[r.vendedor] = agg.get(r.vendedor, 0) + r.liquido_reais
+                vendedores = {v: total * Decimal("1.2") for v, total in agg.items()}
+                total_geral = sum(vendedores.values())
+                report[nome] = {
+                    'data_venda': data_venda,
+                    'vendedores': vendedores,
+                    'total': total_geral
+                }
+                print(f"DEBUG: Report for {nome} -> total={total_geral}")
+        return report
 
 
 def filter_em_atraso(
