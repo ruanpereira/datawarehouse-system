@@ -20,7 +20,7 @@ class DataFrameViewer:
             control_frame,
             text="Exportar para Excel",
             style='TButton',
-            command=lambda: self.export_to_excel(df, title)
+            command=lambda: [win.destroy(), self.export_to_excel(df, title)]
         ).pack(side='right')
 
         # Treeview
