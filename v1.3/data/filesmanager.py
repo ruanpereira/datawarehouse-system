@@ -14,7 +14,7 @@ class FileManager:
             self.df = df
             self.current_batch_id = batch_id if self.functionExport == "Banco de dados" else None
             self.numeric_columns = df.select_dtypes(include=['number']).columns.tolist()
-            self.combo_columns['values'] = df.columns.tolist()
+            # self.combo_columns['values'] = df.columns.tolist()
             self.file_var.set(path)
 
             for btn in [
@@ -31,8 +31,8 @@ class FileManager:
         except Exception as e:
             messagebox.showerror("Erro", f"Falha ao carregar arquivo:\n{e}")
 
-    def load_values(self, event=None):
-        col = self.combo_columns.get()
-        if col and hasattr(self, 'df') and not self.df.empty:
-            vals = sorted(self.df[col].dropna().astype(str).unique().tolist())
-            self.combo_values['values'] = vals
+    # def load_values(self, event=None):
+    #     col = self.combo_columns.get()
+    #     if col and hasattr(self, 'df') and not self.df.empty:
+    #         vals = sorted(self.df[col].dropna().astype(str).unique().tolist())
+    #         self.combo_values['values'] = vals

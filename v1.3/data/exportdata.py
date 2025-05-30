@@ -64,31 +64,31 @@ class ExportFile:
 
         messagebox.showinfo("Sucesso", f"Dados exportados!\n{filepath}")
 
-    def generate(self):
-        col = self.combo_columns.get()
-        val = self.combo_values.get()
+    # def generate(self):
+    #     col = self.combo_columns.get()
+    #     val = self.combo_values.get()
 
-        if not col or not val:
-            messagebox.showerror("Erro", "Selecione uma coluna e um valor para filtrar!")
-            return
+    #     if not col or not val:
+    #         messagebox.showerror("Erro", "Selecione uma coluna e um valor para filtrar!")
+    #         return
 
-        if not self.numeric_columns:
-            messagebox.showerror("Erro", "Nenhuma coluna numérica encontrada!")
-            return
+    #     if not self.numeric_columns:
+    #         messagebox.showerror("Erro", "Nenhuma coluna numérica encontrada!")
+    #         return
 
-        try:
-            media_col = self.numeric_columns[0]
-            df_filtered = self.df[self.df[col].astype(str) == val]
+    #     try:
+    #         media_col = self.numeric_columns[0]
+    #         df_filtered = self.df[self.df[col].astype(str) == val]
 
-            data = {
-                'filtro': f"{col}: {val}",
-                'media_total': f"R$ {df_filtered[media_col].mean():.2f}",
-                'media_geral': f"R$ {self.df[media_col].mean():.2f}" if self.var_media_all.get() else None,
-                'Total de credito em atraso': f"{total_credito_em_atraso(self.df)}" if self.var_total_credito_atraso.get() else None,
-                'Numero de inadimplentes no relatorio': f"{count_inadimplentes(self.df)}" if self.var_numero_inadimplentes.get() else None,
-                'observacoes': ''
-            }
-            self.report_gen.generate(data, 'relatorio_vendas.docx')
-            messagebox.showinfo("Sucesso", "Relatório gerado com sucesso!")
-        except Exception as e:
-            messagebox.showerror("Erro", f"Falha ao gerar relatório:\n{e}")
+    #         data = {
+    #             'filtro': f"{col}: {val}",
+    #             'media_total': f"R$ {df_filtered[media_col].mean():.2f}",
+    #             'media_geral': f"R$ {self.df[media_col].mean():.2f}" if self.var_media_all.get() else None,
+    #             'Total de credito em atraso': f"{total_credito_em_atraso(self.df)}" if self.var_total_credito_atraso.get() else None,
+    #             'Numero de inadimplentes no relatorio': f"{count_inadimplentes(self.df)}" if self.var_numero_inadimplentes.get() else None,
+    #             'observacoes': ''
+    #         }
+    #         self.report_gen.generate(data, 'relatorio_vendas.docx')
+    #         messagebox.showinfo("Sucesso", "Relatório gerado com sucesso!")
+    #     except Exception as e:
+    #         messagebox.showerror("Erro", f"Falha ao gerar relatório:\n{e}")

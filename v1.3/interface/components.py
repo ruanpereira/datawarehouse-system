@@ -1,4 +1,4 @@
-from modulos import * 
+from modulos import *  
 from data.datafont import DataOrigin
 
 class MainUIBuilder(DataOrigin):
@@ -10,77 +10,152 @@ class MainUIBuilder(DataOrigin):
     def setup_UI(self):
         self.choice_DB()
         print(self.functionExport)
-        if self.functionExport == "Banco de dados":
-            self.choiceTable()
+
         # Constrói toda a interface gráfica
         main_frame = ttk.Frame(self, padding=20)
         main_frame.pack(expand=True, fill='both')
 
-        # Botão de troca de modo (Banco de dados <-> Local)
-        ttk.Button(
+        # Configurar grid principal
+        main_frame.columnconfigure(0, weight=1)
+        main_frame.rowconfigure(0, weight=0)  # Modo
+        main_frame.rowconfigure(1, weight=0)  # Seleção BD
+        main_frame.rowconfigure(2, weight=0)  # Arquivo
+        main_frame.rowconfigure(3, weight=1)  # Filtros
+
+        # Botão de troca de modo
+        btn_mode = ttk.Button(
             main_frame,
             text="Trocar Modo",
             command=self.reset_UI
-        ).grid(row=0, column=0, sticky='nw', padx=5, pady=5)
-        main_frame.pack(expand=True, fill='both')
+        )
+        btn_mode.grid(row=0, column=0, sticky='nw', padx=5, pady=5)
 
-        # Configurar grid principal
-        main_frame.columnconfigure(0, weight=1)
-        main_frame.rowconfigure(4, weight=1)
+        # Se modo Banco de dados, mostra seleção de batch_id
+        if self.functionExport == "Banco de dados":
+            lbl_select = ttk.Label(
+                main_frame,
+                text="Selecione um lote de vendas:",
+                font=("Segoe UI", 12)
+            )
+            lbl_select.grid(row=1, column=0, sticky='w', padx=5, pady=(10, 2))
+
+            self.combo_batch = ttk.Combobox(
+                main_frame,
+                state="readonly",
+                width=60,
+                values=[]
+            )
+            self.combo_batch.grid(row=1, column=0, sticky='e', padx=5, pady=(2, 10))
+
+            btn_load_vendas = ttk.Button(
+                main_frame,
+                text="Carregar Vendas",
+                command=self.load_vendas
+            )
+            btn_load_vendas.grid(row=1, column=0, sticky='se', padx=5)
+
+            # Inicializa lista de batches
+            self.load_batch_ids()
 
         # Frame de Seleção de Arquivo
-        file_frame = ttk.LabelFrame(main_frame, text="Seleção de arquivo para upload no banco de dados" if self.functionExport == "Banco de dados" else " Seleção de Arquivo ", padding=15)
-        file_frame.grid(row=1, column=0, padx=5, pady=5, sticky='ew')
+        file_frame = ttk.LabelFrame(
+            main_frame,
+            text=("Seleção de arquivo para upload no banco de dados" 
+                  if self.functionExport == "Banco de dados" 
+                  else "Seleção de Arquivo"),
+            padding=15
+        )
+        file_frame.grid(row=2, column=0, padx=5, pady=10, sticky='ew')
         file_frame.columnconfigure(0, weight=1)
+        file_frame.columnconfigure(1, weight=0)
 
         self.file_var = tk.StringVar(value="Nenhum arquivo selecionado")
-        self.entry_file = ttk.Entry(file_frame, textvariable=self.file_var, state='readonly')
-        self.entry_file.grid(row=0, column=0, padx=(0, 10), sticky='ew')
-        ttk.Button(
+        entry_file = ttk.Entry(
+            file_frame,
+            textvariable=self.file_var,
+            state='readonly'
+        )
+        entry_file.grid(row=0, column=0, padx=(0, 10), sticky='ew')
+
+        # Ao selecionar arquivo, atualiza combobox caso em modo BD
+        def on_file_select():
+            self.load_file()
+            if self.functionExport == "Banco de dados":
+                # recarrega os batch IDs incluindo novo upload
+                self.load_batch_ids()
+                # ajusta combobox para exibir o mais recente
+                ids = list(self.combo_batch['values'])
+                if ids:
+                    self.combo_batch.set(ids[-1])
+
+        btn_browse = ttk.Button(
             file_frame,
             text="Procurar",
             style='TButton',
-            command=self.load_file
-        ).grid(row=0, column=1, sticky='ew')
+            command=on_file_select
+        )
+        btn_browse.grid(row=0, column=1, sticky='e')
 
         # Frame de Filtros Rápidos
-        filters_frame = ttk.LabelFrame(main_frame, text=" Filtros Rápidos ", padding=15)
-        filters_frame.grid(row=1, column=0, padx=5, pady=5, sticky='nsew')
+        filters_frame = ttk.LabelFrame(
+            main_frame,
+            text="Filtros Rápidos",
+            padding=15
+        )
+        filters_frame.grid(row=3, column=0, padx=5, pady=10, sticky='nsew')
         filters_frame.columnconfigure(0, weight=1)
+        filters_frame.columnconfigure(1, weight=1)
 
-        # Botões de filtros rápidos (não exibidos até carregar arquivo)
+        # Botões de filtros rápidos
         self.btn_atraso = ttk.Button(
             filters_frame,
             text="Em Atraso",
-            command=lambda: self.display_df(filter_status_atraso_db(self.df) if self.functionExport == "Banco de dados" else filter_status_atraso_local(self.df), "Vendas em Atraso")
+            command=lambda: self.display_df(
+                filter_status_atraso_db(self.df) if self.functionExport == "Banco de dados" else filter_status_atraso_local(self.df),
+                "Vendas em Atraso"
+            )
         )
         self.btn_ano = ttk.Button(
             filters_frame,
             text="Ano 2025",
-            command=lambda: self.display_df(filter_by_year_db(self.df, 2025) if self.functionExport == "Banco de dados" else filter_by_year_local(self.df, 2025), "Vendas 2025")
+            command=lambda: self.display_df(
+                filter_by_year_db(self.df, 2025) if self.functionExport == "Banco de dados" else filter_by_year_local(self.df, 2025),
+                "Vendas 2025"
+            )
         )
         self.btn_total = ttk.Button(
             filters_frame,
             text="Total Líq. por Vendedor",
-            command=lambda: self.display_df(total_liquido_por_vendedor_db(self.df) if self.functionExport == "Banco de dados" else total_liquido_por_vendedor_local(self.df), "Total Líquido")
+            command=lambda: self.display_df(
+                total_liquido_por_vendedor_db(self.df) if self.functionExport == "Banco de dados" else total_liquido_por_vendedor_local(self.df),
+                "Total Líquido"
+            )
         )
         self.btn_total_consorcio = ttk.Button(
             filters_frame,
-            text="Total Líq. por Consorcio e Vendedor",
-            command=lambda: self.display_df(total_liquido_por_consorcio_vendedor_db(self.df) if self.functionExport == "Banco de dados" else total_liquido_por_consorcio_vendedor_local(self.df), "Total Líquido")
+            text="Total Líq. por Consórcio e Vendedor",
+            command=lambda: self.display_df(
+                total_liquido_por_consorcio_vendedor_db(self.df) if self.functionExport == "Banco de dados" else total_liquido_por_consorcio_vendedor_local(self.df),
+                "Total Líquido"
+            )
         )
         self.btn_total_consorcio_relatorio = ttk.Button(
             filters_frame,
             text="Relatório Consorciados",
             command=lambda: self.display_df(
-                RelatorioToDf.generate(relatorio_por_consorciado_db(self.df) if self.functionExport == "Banco de dados" else relatorio_por_consorciado_local(self.df)),
+                RelatorioToDf.generate(
+                    relatorio_por_consorciado_db(self.df) if self.functionExport == "Banco de dados" else relatorio_por_consorciado_local(self.df)
+                ),
                 "Total Líquido - Relatório"
             )
         )
         self.btn_clientes_inadimplentes = ttk.Button(
             filters_frame,
-            text="Clientes inadimplentes",
-            command=lambda: self.display_df(clientes_inadimplentes(self.df), "Inadimplentes")
+            text="Clientes Inadimplentes",
+            command=lambda: self.display_df(
+                clientes_inadimplentes(self.df),
+                "Inadimplentes"
+            )
         )
 
         buttons = [
@@ -91,66 +166,12 @@ class MainUIBuilder(DataOrigin):
             self.btn_total_consorcio_relatorio,
             self.btn_clientes_inadimplentes
         ]
-        # Inicialmente escondidos
         for btn in buttons:
             btn.grid_remove()
 
+        num_rows = (len(buttons) + 1) // 2
+        for row in range(num_rows):
+            filters_frame.rowconfigure(row, weight=1)
         for idx, btn in enumerate(buttons):
-            r, c = (idx // 2, idx % 2)
-            btn.grid(row=r, column=c, pady=4, sticky='w')
-
-        # Frame de Filtros Personalizados
-        custom_filter_frame = ttk.LabelFrame(main_frame, text=" Filtros Personalizados ", padding=15)
-        custom_filter_frame.grid(row=2, column=0, padx=5, pady=5, sticky='ew')
-        custom_filter_frame.columnconfigure(0, weight=1)
-
-        ttk.Label(custom_filter_frame, text="Coluna para filtrar:").grid(row=0, column=0, sticky='w')
-        self.combo_columns = ttk.Combobox(custom_filter_frame, state='readonly')
-        self.combo_columns.grid(row=1, column=0, pady=5, sticky='ew')
-        self.combo_columns.bind("<<ComboboxSelected>>", self.load_values)
-
-        ttk.Label(custom_filter_frame, text="Valor para filtrar:").grid(row=2, column=0, sticky='w')
-        self.combo_values = ttk.Combobox(custom_filter_frame, state='readonly')
-        self.combo_values.grid(row=3, column=0, pady=5, sticky='ew')
-
-        # Frame de Opções
-        options_frame = ttk.LabelFrame(main_frame, text=" Opções de Relatório ", padding=15)
-        options_frame.grid(row=3, column=0, padx=5, pady=5, sticky='ew')
-        options_frame.columnconfigure(0, weight=1)
-
-        self.var_media_date = tk.BooleanVar()
-        self.var_media_all = tk.BooleanVar()
-        self.var_total_credito_atraso = tk.BooleanVar()
-        self.var_numero_inadimplentes = tk.BooleanVar()
-
-        ttk.Checkbutton(
-            options_frame,
-            text="Incluir média por data",
-            variable=self.var_media_date
-        ).grid(row=0, column=0, sticky='w', pady=2)
-
-        ttk.Checkbutton(
-            options_frame,
-            text="Incluir média geral",
-            variable=self.var_media_all
-        ).grid(row=1, column=0, sticky='w', pady=2)
-
-        ttk.Checkbutton(
-            options_frame,
-            text='Incluir total de credito em atraso',
-            variable=self.var_total_credito_atraso
-        ).grid(row=0, column=1, sticky='w', pady=2)
-
-        ttk.Checkbutton(
-            options_frame,
-            text='Incluir número de inadimplentes',
-            variable=self.var_numero_inadimplentes
-        ).grid(row=1, column=1, sticky='w', pady=2)
-
-        # Botão Gerar Relatório
-        ttk.Button(
-            main_frame,
-            text="Gerar Relatório",
-            style='Accent.TButton',
-            command=self.generate
-        ).grid(row=4, column=0, pady=15, sticky='ew')
+            r, c = divmod(idx, 2)
+            btn.grid(row=r, column=c, padx=5, pady=5, sticky='ew')
