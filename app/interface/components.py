@@ -32,15 +32,17 @@ class MainUIBuilder(DataOrigin):
 
         # Se modo Banco de dados, mostra seleção de batch_id
         if self.functionExport == "Banco de dados":
-            lbl_select = ttk.Label(
+            lbl_select = ttk.LabelFrame(
                 main_frame,
                 text="Selecione um lote de vendas:",
-                font=("Segoe UI", 12)
+                padding= 15
             )
             lbl_select.grid(row=1, column=0, sticky='w', padx=5, pady=(10, 2))
-
+            lbl_select.columnconfigure(0, weight=1)
+            lbl_select.columnconfigure(1, weight=0)
+            
             self.combo_batch = ttk.Combobox(
-                main_frame,
+                lbl_select,
                 state="readonly",
                 width=60,
                 values=[]
@@ -48,11 +50,11 @@ class MainUIBuilder(DataOrigin):
             self.combo_batch.grid(row=1, column=0, sticky='e', padx=5, pady=(2, 10))
 
             btn_load_vendas = ttk.Button(
-                main_frame,
+                lbl_select,
                 text="Carregar Vendas",
                 command=self.load_vendas
             )
-            btn_load_vendas.grid(row=1, column=0, sticky='se', padx=5)
+            btn_load_vendas.grid(row=1, column=1, sticky='se', padx=5, pady=(0, 5))
 
             # Inicializa lista de batches
             self.load_batch_ids()
