@@ -6,7 +6,7 @@ class DataFrameViewer:
     def display_df(self, df: pd.DataFrame, title: str, visualizer: bool = False):
         win = tk.Toplevel(self)
         win.title(title)
-        win.geometry("900x600")
+        win.geometry("900x700")
         win.minsize(600, 400)
 
         container = ttk.Frame(win)
@@ -30,47 +30,64 @@ class DataFrameViewer:
             col_frame = ttk.LabelFrame(container, text="Colunas Visíveis")
             col_frame.grid(row=2, column=0, sticky='nsew', pady=5)
             col_frame.columnconfigure(0, weight=1)
-            col_frame.rowconfigure(0, weight=1)  # Permite expansão vertical
-            
-            # Container rolável com scroll vertical
-            canvas = tk.Canvas(col_frame, height=150)
-            scrollbar = ttk.Scrollbar(col_frame, orient="vertical", command=canvas.yview)
+            col_frame.rowconfigure(0, weight=1)
+
+            canvas = tk.Canvas(col_frame, height=120)
+            scrollbar_v = ttk.Scrollbar(col_frame, orient="vertical", command=canvas.yview)
+            scrollbar_h = ttk.Scrollbar(col_frame, orient="horizontal", command=canvas.xview)
+
             scrollable_frame = ttk.Frame(canvas)
-            
             scrollable_frame.bind(
                 "<Configure>",
                 lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
             )
-            
+
             canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
-            canvas.configure(yscrollcommand=scrollbar.set)
-            
-            # Layout dos elementos de rolagem
+            canvas.configure(
+                yscrollcommand=scrollbar_v.set,
+                xscrollcommand=scrollbar_h.set
+            )
+
             canvas.grid(row=0, column=0, sticky='nsew')
-            scrollbar.grid(row=0, column=1, sticky='ns')
-            
-            # Variáveis para os checkboxes
-            col_vars = {}
-            for col in df.columns:
-                col_vars[col] = tk.BooleanVar(value=True)
-            
-            # Organiza os checkboxes em uma única coluna (rolagem vertical)
-            for i, column_name in enumerate(df.columns):
+            scrollbar_v.grid(row=0, column=1, sticky='ns')
+            scrollbar_h.grid(row=1, column=0, sticky='ew', columnspan=2)
+
+            col_vars = {col: tk.BooleanVar(value=True) for col in df.columns}
+
+            num_colunas = 4
+            for col_index in range(num_colunas):
+                scrollable_frame.columnconfigure(col_index, weight=1)
+
+            for i, col_name in enumerate(df.columns):
+                col_index = i % num_colunas
+                linha = i // num_colunas
                 cb = ttk.Checkbutton(
                     scrollable_frame,
-                    text=column_name,
-                    variable=col_vars[column_name],
+                    text=col_name,
+                    variable=col_vars[col_name]
                 )
-                cb.grid(row=i, column=0, sticky='w', padx=5, pady=2)
-            
-            # Controles de seleção rápida
+                cb.grid(
+                    row=linha,
+                    column=col_index,
+                    sticky='w',
+                    padx=10,
+                    pady=1
+                )
+
             btn_frame = ttk.Frame(col_frame)
-            btn_frame.grid(row=1, column=0, columnspan=2, pady=5, sticky='e')
-            
-            ttk.Button(btn_frame, text="Selecionar Tudo",
-                    command=lambda: [var.set(True) for var in col_vars.values()]).pack(side='left', padx=5)
-            ttk.Button(btn_frame, text="Desmarcar Tudo",
-                    command=lambda: [var.set(False) for var in col_vars.values()]).pack(side='left', padx=5)
+            btn_frame.grid(row=2, column=0, columnspan=2, pady=(5, 0), sticky='e')
+
+            ttk.Button(
+                btn_frame,
+                text="Selecionar Tudo",
+                command=lambda: [var.set(True) for var in col_vars.values()]
+            ).pack(side='left', padx=5)
+
+            ttk.Button(
+                btn_frame,
+                text="Desmarcar Tudo",
+                command=lambda: [var.set(False) for var in col_vars.values()]
+            ).pack(side='left', padx=5)
 
         # Treeview
         tv_frame = ttk.Frame(container)
@@ -85,17 +102,15 @@ class DataFrameViewer:
 
         for col in df.columns:
             tv.heading(col, text=col)
-            tv.column(col, width=100, anchor='center', minwidth=50)
+            tv.column(col, width=100, anchor='center', minwidth=50, stretch=0)
 
         tv.grid(row=0, column=0, sticky='nsew')
         vsb.grid(row=0, column=1, sticky='ns')
         hsb.grid(row=1, column=0, sticky='ew')
 
-        # DataFrame filtrado inicialmente
         filtered_df = df
         visible_columns = list(df.columns)
 
-        # Inserir dados iniciais
         for _, row in filtered_df.iterrows():
             tv.insert('', 'end', values=list(row))
 
@@ -107,20 +122,16 @@ class DataFrameViewer:
                 filtered_df = df[mask]
             else:
                 filtered_df = df
-            
             refresh_treeview()
 
         def refresh_treeview():
             tv.delete(*tv.get_children())
-            
             if visualizer:
                 nonlocal visible_columns
                 visible_columns = [col for col in df.columns if col_vars[col].get()]
-            
             tv["columns"] = visible_columns
             for col in visible_columns:
                 tv.heading(col, text=col)
-            
             for _, row in filtered_df.iterrows():
                 tv.insert('', 'end', values=list(row[visible_columns]))
 
